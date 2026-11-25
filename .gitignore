@@ -39,3 +39,4 @@ storefront_modules.example.json
 *.py
 __pycache__/
 *.txt
+alphastore-debug-apk/

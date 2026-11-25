@@ -134,18 +134,18 @@ private val CHAPTERS = listOf(
         Feature(Sym.Bolt, "Instalações silenciosas com Shizuku", "Com Shizuku ou Shizuku-Next em execução, instalações e atualizações passam sem aviso a cada vez. Shizuku-Next também aparece na lista de instaladores.", settings("installer")),
         Feature(Sym.AdminPanelSettings, "Dhizuku", "Instalações, atualizações e desinstalações silenciosas pelo device owner compartilhado do Dhizuku, sem Shizuku nem root. Android 8 ou superior.", settings("installer")),
         Feature(Sym.Tune, "Além da instalação", "Antes de cada instalação via root ou Shizuku, ou na folha do instalador de APK também via depuração sem fio, escolha entre 19 opções: downgrade, conceder todas as permissões, configurações restritas, builds de teste, local de armazenamento, Play Store ou instalador personalizado e mais.", settings("installer")),
-        Feature(Sym.Terminal, "Modo root", "Instalações silenciosas, atualizações e todas as ferramentas do Guardian via root, sem precisar de Shizuku ou depuração sem fio.", settings("installer")),
+        Feature(Sym.Terminal, "Modo root", "Instalações silenciosas, atualizações e todas as ferramentas do Guardião via root, sem precisar de Shizuku ou depuração sem fio.", settings("installer")),
         Feature(Sym.Sync, "Adotar apps instalados", "Com root, a AlphaStore assume as atualizações de apps do catálogo que você obteve em outro lugar. Seus dados ficam exatamente como estavam.", settings("installer")),
         Feature(Sym.Lock, "Bloqueio de atualização", "No Android 14 ou mais novo com root, outras lojas precisam pedir sua permissão antes de atualizar apps instalados pela AlphaStore.", settings("installer")),
         Feature(Sym.DeleteSweep, "Limpar cache de todos os apps", "Com root, libere espaço em todos os seus apps em um único toque.", settings("installer")),
         Feature(Sym.Refresh, "Forçar nova varredura", "Recarregue a lista de apps instalados sempre que algo parecer desatualizado.", settings("installer")),
     )),
-    Chapter("xtra", "Guardian e Sentinel", "Ferramentas de segurança e controle integradas.", Sym.Shield, Color(0xFFEF4444), MaterialShapes.Cookie6Sided, listOf(
-        Feature(Sym.Shield, "Guardian: permissões", "Identifique apps com permissões sensíveis como localização, microfone, contatos e armazenamento, e revogue-as.", settings("installer")),
-        Feature(Sym.Unarchive, "Guardian: extrair APK", "Extraia o APK de qualquer app instalado e salve-o.", settings("installer")),
-        Feature(Sym.DeleteForever, "Guardian: debloat", "Remova apps de sistema pré-instalados de forma reversível, guiado por uma lista da comunidade que marca o que é seguro remover. As notas de cada app trazem links e fontes tocáveis.", settings("installer")),
-        Feature(Sym.MonitorHeart, "Sentinel: varreduras rápida e profunda", "Verifique apps instalados contra um banco de assinaturas de ameaças e varra seu armazenamento em busca de arquivos infectados.", settings("installer")),
-        Feature(Sym.Lan, "Sentinel: sentinela de rede", "Uma auditoria ao vivo da sua conexão: VPN, DNS, proxies, portais cativos e criptografia do Wi-Fi.", settings("installer")),
+    Chapter("xtra", "Guardião e Sentinela", "Ferramentas de segurança e controle integradas.", Sym.Shield, Color(0xFFEF4444), MaterialShapes.Cookie6Sided, listOf(
+        Feature(Sym.Shield, "Guardião: permissões", "Identifique apps com permissões sensíveis como localização, microfone, contatos e armazenamento, e revogue-as.", settings("installer")),
+        Feature(Sym.Unarchive, "Guardião: extrair APK", "Extraia o APK de qualquer app instalado e salve-o.", settings("installer")),
+        Feature(Sym.DeleteForever, "Guardião: debloat", "Remova apps de sistema pré-instalados de forma reversível, guiado por uma lista da comunidade que marca o que é seguro remover. As notas de cada app trazem links e fontes tocáveis.", settings("installer")),
+        Feature(Sym.MonitorHeart, "Sentinela: varreduras rápida e profunda", "Verifique apps instalados contra um banco de assinaturas de ameaças e varra seu armazenamento em busca de arquivos infectados.", settings("installer")),
+        Feature(Sym.Lan, "Sentinela: sentinela de rede", "Uma auditoria ao vivo da sua conexão: VPN, DNS, proxies, portais cativos e criptografia do Wi-Fi.", settings("installer")),
         Feature(Sym.DeveloperMode, "Vigia ADB", "Veja de relance se a ponte de desenvolvedor do seu celular está aberta."),
     )),
     Chapter("look", "Aparência e sensação", "Faça a AlphaStore ter a aparência e o movimento que você gosta.", Sym.Palette, Color(0xFFA855F7), MaterialShapes.Flower, listOf(
@@ -296,7 +296,7 @@ private fun GuideHero(total: Int, gutter: Dp) {
             MorphBlob(HERO_SHAPES, shape, 104.dp, cs.primary, Modifier.padding(top = 12.dp)) {
                 Icon(painterResource(com.ramonmods.alphastore.R.drawable.ic_splash_logo), null, Modifier.size(72.dp), tint = cs.onPrimary)
             }
-            Text("GUIA DE CAMPO", Modifier.padding(top = 20.dp), style = MaterialTheme.typography.labelLargeEmphasized, color = cs.primary)
+            Text("Guia de Campo", Modifier.padding(top = 20.dp), style = MaterialTheme.typography.labelLargeEmphasized, color = cs.primary)
             Text("Conheça a AlphaStore", style = MaterialTheme.typography.displayMediumEmphasized)
             Text("Todos os $total recursos da AlphaStore, de backups e modo compacto a insígnias, Hall da Fama e Dino Run. Toque em um recurso com seta para ir direto a ele.",
                 Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)

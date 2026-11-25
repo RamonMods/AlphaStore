@@ -196,7 +196,7 @@ private val STORY = listOf(
     Card(170, "Planícies do Kernel Panic", "O chão pisca em vermelho e reinicia sob seus pés. Você continua andando mesmo assim.", Sym.Bolt, Orange),
     Card(185, "Velhos Amigos", "O Rei do Kernel, a Vila e todos os forks que você uniu cavalgam ao seu lado. As portas do castelo tremem.", Sym.Group, Indigo),
     Card(195, "Trono Nulo", "O Imperador Nulo se ergue. Sua coroa diz sudo. Seus olhos dizem undefined.", Sym.Castle, Gray),
-    Card(200, "ROOT RECONQUISTADO!", "CHEFE FINAL: Você destronou o Imperador Nulo e devolveu o root ao povo. Insígnia Sudo Sovereign desbloqueada!", Sym.Crown, Color(0xFFE11D48)),
+    Card(200, "ROOT RECUPERADO!", "CHEFE FINAL: Você destronou o Imperador Nulo e devolveu o root ao povo. Insígnia Sudo Sovereign desbloqueada!", Sym.Crown, Color(0xFFE11D48)),
 )
 /** Between Chapter 2 beats the road still answers every ad, so the grind never shows a blank card. */
 private val MARCH = listOf(
@@ -790,8 +790,8 @@ private fun Medal(id: String, s: Settings, focused: Boolean, ring: Boolean, modi
 
 // ---------------- Custom bundle creator ----------------
 
-private val ICON_CHOICES = listOf("fa-layer-group" to "Layers", "fa-cubes" to "Cubes", "fa-rocket" to "Rocket", "fa-bolt" to "Bolt", "fa-star" to "Star", "fa-heart" to "Heart",
-    "fa-gamepad" to "Gaming", "fa-music" to "Music", "fa-palette" to "Creative", "fa-shield-halved" to "Privacy", "fa-graduation-cap" to "Learn", "fa-briefcase" to "Work")
+private val ICON_CHOICES = listOf("fa-layer-group" to "Camadas", "fa-cubes" to "Cubos", "fa-rocket" to "Foguete", "fa-bolt" to "Trovão", "fa-star" to "Estrela", "fa-heart" to "Coração",
+    "fa-gamepad" to "Games", "fa-music" to "Música", "fa-palette" to "Criativo", "fa-shield-halved" to "Privacidade", "fa-graduation-cap" to "Aprender", "fa-briefcase" to "Trabalho")
 private val COLOR_CHOICES = listOf("linear-gradient(135deg, #6366f1, #ec4899)", "linear-gradient(135deg, #0ea5e9, #6366f1)", "linear-gradient(135deg, #10b981, #0ea5e9)",
     "linear-gradient(135deg, #f59e0b, #ef4444)", "linear-gradient(135deg, #8b5cf6, #ec4899)", "linear-gradient(135deg, #111827, #4f46e5)")
 

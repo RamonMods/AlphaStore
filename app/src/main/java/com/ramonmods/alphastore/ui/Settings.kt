@@ -220,7 +220,7 @@ private val CATS = listOf(
     Cat("visuals", Sym.Palette, Purple, "Visual e sensação", "Tema, fonte, movimento e densidade", MaterialShapes.Flower),
     Cat("network", Sym.Wifi, SkyC, "Rede", "Regras de Wi-Fi e atualização automática", MaterialShapes.Clover4Leaf),
     Cat("storage", Sym.CleaningServices, Orange, "Armazenamento", "Limpeza e APKs salvos", MaterialShapes.Sunny),
-    Cat("installer", Sym.Shield, Green, "AlphaStore Xtra", "Guardian, Sentinel e instalador", MaterialShapes.Gem),
+    Cat("installer", Sym.Shield, Green, "AlphaStore Xtra", "Guardião, Sentinela e instalador", MaterialShapes.Gem),
     Cat("identity", Sym.Backup, Pink, "Backup", "Salve ou restaure sua identidade", MaterialShapes.Cookie6Sided),
     Cat("interface", Sym.ViewQuilt, Teal, "Interface", "Layout da loja e abas visíveis", MaterialShapes.Pentagon),
     Cat("developer", Sym.Terminal, Yellow, "Desenvolvedor", "Opções de depuração e ferramentas", MaterialShapes.SoftBurst),
@@ -438,8 +438,8 @@ fun SettingsScreen(vm: MainViewModel) {
                     }
                     "installer" -> {
                         Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FeatureTile(Sym.Shield, "Guardian", "Permissões, exportar APK, debloat", Green, MaterialShapes.Cookie9Sided, Modifier.weight(1f)) { modal = "guardian" }
-                            FeatureTile(Sym.MonitorHeart, "Sentinel", "Verificação de malware nos apps instalados", Blue, MaterialShapes.Sunny, Modifier.weight(1f)) { modal = "sentinel" }
+                            FeatureTile(Sym.Shield, "Guardião", "Permissões, exportar APK, debloat", Green, MaterialShapes.Cookie9Sided, Modifier.weight(1f)) { modal = "guardian" }
+                            FeatureTile(Sym.MonitorHeart, "Sentinela", "Verificação de malware nos apps instalados", Blue, MaterialShapes.Sunny, Modifier.weight(1f)) { modal = "sentinel" }
                         }
                         val ch = ptr(s.pullToRefreshCharacter)
                         Section("Puxar para atualizar") {
@@ -493,7 +493,7 @@ fun SettingsScreen(vm: MainViewModel) {
                                 }
                             }
                         }
-                        Section("Root") {
+                        Section("Raiz") {
                             var adopt by remember { mutableStateOf<String?>(null) }
                             ConfirmDialog(adopt, "Adotar", onConfirm = vm::adoptApps, onDismiss = { adopt = null })
                             Toggle(Sym.Terminal, "Modo root", "Instalações silenciosas e todas as ferramentas do Guardian via su, sem Shizuku ou depuração sem fio", s.rootMode) {
@@ -546,7 +546,7 @@ fun SettingsScreen(vm: MainViewModel) {
                             else "Leve para movimentos decorativos, Turbo mantém mais imagens prontas. Mudanças nas imagens valem após reiniciar.", Modifier.padding(horizontal = 32.dp),
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         // One connected group across the page, the same 16dp margins as the groups below: no scrolling, nothing off to one side
-                        val modes = listOf("auto" to "Auto", "lite" to "Leve", "balanced" to "Equilibrado", "boost" to "Turbo")
+                        val modes = listOf("auto" to "Automático", "lite" to "Leve", "balanced" to "Equilibrado", "boost" to "Turbo")
                         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
                             modes.forEachIndexed { i, (id, label) ->
                                 ToggleButton(s.perfMode == id, { vm.haptic(H.SELECTION); vm.set { it.copy(perfMode = id) } }, Modifier.weight(if (id == "balanced") 1.3f else 1f),
@@ -750,7 +750,7 @@ private fun Hub(vm: MainViewModel, s: Settings, d: DataState, active: Int, ready
             Bento(vm, c, shared, modifier.movable(i, c.id), compact, badge) {
                 if (!compact) when (c.id) {
                     "queue" -> {
-                        Text(if (queued == 0) "All caught up" else "$active active · $ready ready · $pending updates", style = MaterialTheme.typography.labelLarge, color = LocalContentColor.current.copy(.8f))
+                        Text(if (queued == 0) "Tudo em dia" else "$active ativo · $ready pronto · $pending atualizações", style = MaterialTheme.typography.labelLarge, color = LocalContentColor.current.copy(.8f))
                         val prog = d.activeDownloads.keys.mapNotNull { d.downloadProgress[it] }.takeIf { it.isNotEmpty() }?.average()?.toFloat()
                         if (prog != null) LinearWavyProgressIndicator({ prog / 100f }, Modifier.fillMaxWidth().padding(top = 8.dp), color = LocalContentColor.current)
                     }
@@ -1343,7 +1343,7 @@ internal fun DirectInstallSheet(vm: MainViewModel, onDismiss: () -> Unit) = Alph
     var wifi by remember { mutableStateOf(WirelessAdb.onWifi(ctx)) }; var dev by remember { mutableStateOf(WirelessAdb.devOptions(ctx)) }
     var wl by remember { mutableStateOf(WirelessAdb.wirelessOn(ctx)) }
     var code by remember { mutableStateOf("") }; var enabled by remember { mutableStateOf(false) }
-    fun enable() { if (enabled) return; enabled = true; vm.set { it.copy(directInstall = true) }; vm.haptic(H.SUCCESS); vm.toast("Installs now skip the 24-hour wait"); close() }
+    fun enable() { if (enabled) return; enabled = true; vm.set { it.copy(directInstall = true) }; vm.haptic(H.SUCCESS); vm.toast("As instalações agora pulam a espera de 24 horas"); close() }
     // Already paired: no setup needed
     LaunchedEffect(Unit) { if (runCatching { WirelessAdb.connect(ctx) }.isSuccess) enable() }
     LaunchedEffect(st.phase) { if (st.phase == WirelessAdb.Phase.READY) enable() }
@@ -1514,7 +1514,7 @@ private fun CosmeticRow(items: List<Cosmetic>, selected: String, width: androidx
 }
 
 @Composable
-private fun IconPicker(vm: MainViewModel, s: Settings) = Section("App icon") {
+private fun IconPicker(vm: MainViewModel, s: Settings) = Section("Ícone do app") {
     CosmeticRow(APP_ICONS, s.appIcon, 92.dp, { vm.pickCosmetic(it, true) }) { c ->
         val (bg, fg) = ICON_ART.getValue(c.id)
         Box(Modifier.size(56.dp).clip(CircleShape)) {
@@ -1527,7 +1527,7 @@ private fun IconPicker(vm: MainViewModel, s: Settings) = Section("App icon") {
 
 /** Each dock drawn small, in its own colors and selected-item style. */
 @Composable
-private fun DockPicker(vm: MainViewModel, s: Settings) = Section("Dock style") {
+private fun DockPicker(vm: MainViewModel, s: Settings) = Section("Estilo do dock") {
     val cs = MaterialTheme.colorScheme
     CosmeticRow(DOCKS, s.navDock, 132.dp, { vm.pickCosmetic(it, false) }) { c ->
         val icons = listOf(Sym.AndroidFilled, Sym.DesktopWindows, Sym.GridView, Sym.Code)

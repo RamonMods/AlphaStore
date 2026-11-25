@@ -56,7 +56,7 @@ import kotlinx.coroutines.launch
 
 private data class NavItem(val tab: Tab, val icon: ImageVector, val selected: ImageVector, val label: String, val subtitle: String)
 private val NAV = listOf(
-    NavItem(Tab.ANDROID, Sym.Android, Sym.AndroidFilled, "Apps", "apps"), NavItem(Tab.PC, Sym.DesktopWindows, Sym.DesktopWindowsFilled, "PC", "PC"),
+    NavItem(Tab.ANDROID, Sym.Android, Sym.AndroidFilled, "Aplicativos", "aplicativos"), NavItem(Tab.PC, Sym.DesktopWindows, Sym.DesktopWindowsFilled, "PC", "PC"),
     NavItem(Tab.TV, Sym.Tv, Sym.TvFilled, "TV", "TV"), NavItem(Tab.ORBIT, Sym.Orbit, Sym.OrbitFilled, "Orbit", "Orbit"), NavItem(Tab.MYAPPS, Sym.GridView, Sym.GridViewFilled, "Meus Apps", "meus"),
     NavItem(Tab.ABOUT, Sym.Code, Sym.CodeFilled, "Dev", "Sobre o AlphaStore"),
 )

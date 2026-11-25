@@ -97,7 +97,7 @@ fun DetailScreen(vm: MainViewModel, base: AppItem) {
     // A known source already resolved a file. The link itself often does not end in .apk (APKMirror's download page is one of those).
     val tracked = Orbit.owns(app.id) || app.repoUrl?.takeIf { it.isNotBlank() && it != "#" }?.let { Orbit.sourceOf(it) != OrbitSource.WEB } == true
     val external = !tracked && !directHost && (path.startsWith("http://") || path.startsWith("https://")) && !packaged && "github.com" !in path
-    val domain = if (external) runCatching { app.downloadUrl.toUri().host!!.replace("www.", "") }.getOrDefault("Source") else "External Source"
+    val domain = if (external) runCatching { app.downloadUrl.toUri().host!!.replace("www.", "") }.getOrDefault("Origem") else "Origem externa"
     val fav = app.id in d.favorites
 
     var target by remember(app.id) { mutableStateOf<VersionOption?>(null) }

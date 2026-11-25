@@ -451,12 +451,12 @@ private fun risk(flagged: Int) = when {
 /** Downloaded APK first, then the installed APK, then a direct remote APK link. Android only. */
 fun scanTargetFor(app: AppItem, s: Settings, d: DataState): ScanTarget? {
     if (!app.installsHere()) return null
-    (d.readyToInstall[app.id] ?: d.pendingCleanup[app.id]?.fileName)?.let { return ScanTarget(ScanTargetType.DOWNLOADED_APK, "Downloaded APK", it) }
-    if (!app.packageName.isNullOrEmpty() && !s.installedVersions[app.id].isNullOrEmpty()) return ScanTarget(ScanTargetType.APK, "Installed APK", app.packageName)
+    (d.readyToInstall[app.id] ?: d.pendingCleanup[app.id]?.fileName)?.let { return ScanTarget(ScanTargetType.DOWNLOADED_APK, "APK baixado", it) }
+    if (!app.packageName.isNullOrEmpty() && !s.installedVersions[app.id].isNullOrEmpty()) return ScanTarget(ScanTargetType.APK, "APK instalado", app.packageName)
     val variant = (app.availableVersions.firstOrNull()?.variants?.firstOrNull()?.url ?: app.variants.firstOrNull()?.url)?.takeIf { it.isNotEmpty() }
     val url = variant ?: app.downloadUrl
     val direct = variant != null || Regex("\\.(apk|apks|xapk|zip)(\\?|$)", RegexOption.IGNORE_CASE).containsMatchIn(url)
-    return if (url.startsWith("http") && url != "#" && direct) ScanTarget(ScanTargetType.REMOTE_APK, "APK File", url) else null
+    return if (url.startsWith("http") && url != "#" && direct) ScanTarget(ScanTargetType.REMOTE_APK, "Arquivo APK", url) else null
 }
 
 @Composable
