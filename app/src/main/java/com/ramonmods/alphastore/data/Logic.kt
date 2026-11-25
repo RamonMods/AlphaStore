@@ -498,7 +498,7 @@ fun MyAppRow.matchesQuery(q: String) = q.isBlank() || q.trim().lowercase().let {
 fun modernSortTitle(sort: SortOption) = when (sort) {
     SortOption.HOME -> "Início" to "Mais Escolhas Para Você"; SortOption.OLDEST -> "Oldest First" to "Mais Clássicos"
     SortOption.NAME_ASC -> "A to Z" to "Mais A a Z"; SortOption.NAME_DESC -> "Z to A" to "Mais Z a A"
-    SortOption.SIZE_ASC -> "Smallest Footprint" to "Mais Leves"; SortOption.SIZE_DESC -> "Largest Packages" to "Mais Pesados"
+    SortOption.SIZE_ASC -> "Menor Footprint" to "Mais Leves"; SortOption.SIZE_DESC -> "Maior Packages" to "Mais Pesados"
     else -> "Adicionados Recentemente" to "Mais Escolhas Novas"
 }
 
