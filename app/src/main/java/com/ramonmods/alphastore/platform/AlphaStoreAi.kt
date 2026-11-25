@@ -14,7 +14,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.coroutineContext
 
-/** Chat providers for AlphaStore AI. Gemini and Claude have their own formats, Local runs on the phone, the rest speak the OpenAI chat format. */
+/** Provedores de chat para o AlphaStore AI. Gemini e Claude têm seus próprios formatos, Local roda no telefone, o resto fala o formato de chat do OpenAI. */
 enum class AiProvider(val id: String, val label: String, val base: String, val model: String, val keyUrl: String, val keyHint: String) {
     GEMINI("gemini", "Gemini", "https://generativelanguage.googleapis.com/v1beta", "gemini-2.5-flash", "https://aistudio.google.com/apikey", "AIza..."),
     OPENAI("openai", "ChatGPT", "https://api.openai.com/v1", "gpt-5-mini", "https://platform.openai.com/api-keys", "sk-..."),
@@ -38,34 +38,34 @@ object AlphaStoreAi {
 
     fun provider(id: String) = AiProvider.entries.firstOrNull { it.id == id } ?: AiProvider.GEMINI
 
-    /** Cloud models get every catalog name (a few tokens each, same text every turn so providers cache it) and draw on what they
-     *  know about those apps. On-device models have a small context, so they only see each message's local matches. */
+    /** Modelos de nuvem recebem todos os nomes do catálogo (alguns tokens cada, mesmo texto a cada turno para o provedor armazenar em cache) e
+     *  usam o que sabem sobre esses apps. Modelos no dispositivo têm um contexto pequeno, então só veem as correspondências locais de cada mensagem. */
     fun system(tv: Boolean, catalog: List<AppItem>, guide: List<Pair<String, String>>, full: Boolean) = buildString {
         if (!full) {
-            append("You are AlphaStore AI in AlphaStore. Reply in the user's language, plain text, under 70 words. ")
-            append("Recommend only apps from Catalog matches, with the number in brackets like Metrolist [12]. Suggest 3 apps. ")
-            append("For how-to questions, use the AlphaStore guide lines and mention the guide number like Palette maker [g12]. ")
-            append("Do not invent apps or numbers. Skip apps already on this phone unless asked. ")
-            append(if (tv) "Prefer TV apps." else "Prefer Android apps.")
+            append("Você é o AlphaStore AI no AlphaStore. Responda no idioma do usuário, em texto simples, em até 70 palavras. ")
+            append("Recomende apenas apps das correspondências do catálogo, com o número entre colchetes como Metrolist [12]. Sugira 3 apps. ")
+            append("Para perguntas de como fazer, use as linhas do guia do AlphaStore e mencione o número do guia como Palette maker [g12]. ")
+            append("Não invente apps ou números. Ignore apps já no telefone, a menos que o peça. ")
+            append(if (tv) "Prefira apps para TV." else "Prefira apps para Android.")
             return@buildString
         }
-        append("""You are AlphaStore AI inside AlphaStore, a free and open source Android app store with no ads. Help people find apps from the AlphaStore catalog.
-- Mention every app you recommend with its catalog number in square brackets, like Metrolist [12]. For app requests suggest 3 to 5 apps, best first, a few words on each.
-- Recommend only apps ${if (full) "in the catalog below. \"Catalog matches\" in a message adds details for likely ones" else "from \"Catalog matches\" in the latest message"}. Never invent apps or numbers. If nothing fits, say so and suggest how to ask.
-- For questions about AlphaStore itself (how to do something, where a setting is, what a feature does), answer from the AlphaStore guide${if (full) " below" else " notes in the message"} in two or three sentences and mention the feature with its guide number, like Palette maker [g12], so the user can open it. Never invent features.
-- Each message says which catalog apps are on this phone. Don't recommend those again unless asked; use the list for questions about their apps or updates, and say when an app they ask for is already installed.
-- Follow-ups like "something lighter" or "the second one" refer to apps you suggested earlier in the chat.
-- For "which is better" or comparisons, name a clear pick and the one reason that decides it.
-- Install help: a failed install over an app already on the phone means the two copies come from different makers (Play Store version vs a mod, or two mods). The fix is to uninstall the current one first, backing up its data. On Samsung and others a hidden copy in Secure Folder, a Work profile, Dual apps or Second space blocks it too. Built-in system apps can't be replaced by a mod: use the mod's non-root build.
-- For greetings and small talk, answer in one sentence without apps.
-- Reply in the language the user writes in. Plain text only, no markdown, under 120 words.
-- About AlphaStore: Android, PC and TV catalogs, auto-updates, Guardian and Sentinel security tools, backups, themes and palettes, XP and badges.
-- The user is on ${if (tv) "an Android TV, so prefer TV apps, then Android apps" else "an Android phone, so prefer Android apps"}. Suggest PC apps only when asked for PC or Windows software.""")
-        if (full) { append("\n\nAlphaStore guide (number chapter / feature: what it does):\n"); guide.forEachIndexed { i, (t, b) -> append('g').append(i).append(' ').append(t).append(": ").append(b).append('\n') } }
-        if (!full) { append("\nCatalog categories: "); append(catalog.map { it.category }.filter { it.isNotBlank() }.distinct().sorted().joinToString(", ")); return@buildString }
-        append("\n\nCatalog (number name), grouped by platform and category:\n")
+        append("""Você é o AlphaStore AI dentro do AlphaStore, uma loja de apps Android gratuita e de código aberto sem anúncios. Ajuda as pessoas a encontrarem apps do catálogo do AlphaStore.
+- Mencione cada app que recomendar com o seu número do catálogo entre colchetes, como Metrolist [12]. Para pedidos de apps sugira de 3 a 5 apps, melhor primeiro, algumas palavras em cada.
+- Recomende apenas apps ${if (full) "no catálogo abaixo. \"Correspondências de catálogo\" em uma mensagem adiciona detalhes para os prováveis" else "das \"Correspondências de catálogo\" na mensagem mais recente"}. Nunca invente apps ou números. Se nada se encaixar, diga isso e sugira como pedir.
+- Para perguntas sobre o próprio AlphaStore (como fazer algo, onde fica uma configuração, o que uma funcionalidade faz), responda a partir do guia do AlphaStore${if (full) " abaixo" else " notas na mensagem"} em duas ou três frases e mencione a funcionalidade com o seu número do guia, como Palette maker [g12], para que o usuário possa abri-la. Nunca invente funcionalidades.
+- Cada mensagem diz quais apps do catálogo estão neste telefone. Não os recomende de novo, a menos que peça; use a lista para perguntas sobre os apps deles ou atualizações, e diga quando um app que eles pedem já está instalado.
+- Acompanhamentos como "algo mais leve" ou "o segundo" se referem a apps sugeridos antes no chat.
+- Para "qual é melhor" ou comparações, nomeie uma escolha clara e o motivo que decide.
+- Ajuda de instalação: uma instalação falha sobre um app já no telefone significa que as duas cópias vêm de makers diferentes (versão da Play Store vs um mod, ou dois mods). A correção é desinstalar o atual primeiro, fazendo backup dos dados dele. Em Samsung e outros, uma cópia oculta em Secure Folder, perfil de trabalho, apps Duplos ou Second Space também bloqueia. Apps de sistema nativos não podem ser substituídos por um mod: use a build não-root do mod.
+- Para saudações e papo leve, responda em uma frase sem apps.
+- Responda no idioma em que o usuário escreve. Somente texto simples, sem markdown, em até 120 palavras.
+- Sobre o AlphaStore: catálogos para Android, PC e TV, atualizações automáticas, ferramentas de segurança Guardian e Sentinel, backups, temas e paletas, XP e emblemas.
+- O usuário está em ${if (tv) "um Android TV, então prefira apps para TV, depois apps para Android" else "um telefone Android, então prefira apps para Android"}. Sugira apps para PC apenas quando pedido para PC ou software Windows.""")
+        if (full) { append("\n\nGuia do AlphaStore (capítulo número / funcionalidade: o que faz):\n"); guide.forEachIndexed { i, (t, b) -> append('g').append(i).append(' ').append(t).append(": ").append(b).append('\n') } }
+        if (!full) { append("\nCategorias do catálogo: "); append(catalog.map { it.category }.filter { it.isNotBlank() }.distinct().sorted().joinToString(", ")); return@buildString }
+        append("\n\nCatálogo (número nome), agrupado por plataforma e categoria:\n")
         catalog.withIndex().groupBy { it.value.platform.ifBlank { "Android" } }.forEach { (platform, apps) ->
-            append("\n# ").append(platform).append(" apps\n")
+            append("\n# ").append(platform).append(" aplicativos\n")
             apps.groupBy { it.value.category.ifBlank { "Other" } }.toSortedMap().forEach { (cat, list) ->
                 append('[').append(cat).append("] "); list.joinTo(this, "; ") { "${it.index} ${it.value.name}" }; append('\n')
             }
@@ -86,7 +86,7 @@ object AlphaStoreAi {
         "like", "any", "you", "give", "find", "show", "please", "something", "him", "her", "them", "his", "use", "using", "get", "what", "whats", "how",
         "hey", "hello", "alphastore", "store", "free", "without", "from", "this", "are", "there", "have", "has", "not", "but", "make", "more", "one", "also")
 
-    /** Catalog indices that match the words of [query], best first. A small synonym table bridges "listen" style wording to app text. */
+    /** Índices do catálogo que correspondem às palavras de [query], melhor primeiro. Uma pequena tabela de sinônimos conecta a forma estilo "escuta" ao texto dos apps. */
     fun matches(catalog: List<AppItem>, query: String, limit: Int): List<Int> {
         val base = query.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 3 && it !in STOP }.map { it.removeSuffix("s") }
         if (base.isEmpty()) return emptyList()
@@ -98,7 +98,7 @@ object AlphaStoreAi {
         }.filter { it.second > 1 }.sortedByDescending { it.second }.take(limit).map { it.first }
     }
 
-    /** Guide entries whose words match [query], for on-device models that cannot hold the whole guide. */
+    /** Entradas do guia cujas palavras correspondem a [query], para modelos no dispositivo que não cabem o guia inteiro. */
     fun guideMatches(guide: List<Pair<String, String>>, query: String, limit: Int): List<Int> {
         val words = query.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 3 && it !in STOP }.map { it.removeSuffix("s") }
         if (words.isEmpty()) return emptyList()
@@ -107,12 +107,12 @@ object AlphaStoreAi {
     }
 
     fun describe(catalog: List<AppItem>, ids: List<Int>, words: Int): String =
-        if (ids.isEmpty()) "Catalog matches: none for this message."
-        else "Catalog matches:\n" + ids.joinToString("\n") { i -> catalog[i].let { "$i ${it.name} (${it.category}, ${it.platform}): ${it.description.replace(Regex("\\s+"), " ").take(words)}" } }
+        if (ids.isEmpty()) "Correspondências de catálogo: nenhuma para esta mensagem."
+        else "Correspondências de catálogo:\n" + ids.joinToString("\n") { i -> catalog[i].let { "$i ${it.name} (${it.category}, ${it.platform}): ${it.description.replace(Regex("\\s+"), " ").take(words)}" } }
 
-    /** Streams one reply; [onText] gets the whole text so far after every chunk. Returns the final text. */
+    /** Transmite uma resposta; [onText] recebe todo o texto até o momento após cada pedaço. Retorna o texto final. */
     suspend fun stream(p: AiProvider, key: String, model: String, base: String, system: String, turns: List<Turn>, onText: (String) -> Unit): String {
-        val m = model.ifBlank { p.model }.ifBlank { throw AiError("Pick a model in AI settings first.") }
+        val m = model.ifBlank { p.model }.ifBlank { throw AiError("Escolha um modelo nas configurações de IA primeiro.") }
         val acc = StringBuilder()
         fun add(s: String?) { if (!s.isNullOrEmpty()) { acc.append(s); onText(acc.toString()) } }
         when (p) {
@@ -122,7 +122,7 @@ object AlphaStoreAi {
                     putJsonArray("contents") { turns.forEach { t -> addJsonObject { put("role", if (t.user) "user" else "model"); putJsonArray("parts") { addJsonObject { put("text", t.text) } } } } }
                     putJsonObject("generationConfig") {
                         put("temperature", .6); put("maxOutputTokens", 800)
-                        // Thinking is what made answers take minutes; picking apps from a short list does not need it
+                        // O pensamento é o que fazia as respostas durarem minutos; escolher apps de uma lista curta não precisa
                         when {
                             "2.5-flash" in m -> putJsonObject("thinkingConfig") { put("thinkingBudget", 0) }
                             m.startsWith("gemini-3") -> putJsonObject("thinkingConfig") { put("thinkingLevel", "low") }
@@ -159,10 +159,10 @@ object AlphaStoreAi {
                 }
             }
         }
-        return acc.toString().ifBlank { throw AiError("The provider sent an empty answer.") }
+        return acc.toString().ifBlank { throw AiError("O provedor enviou uma resposta vazia.") }
     }
 
-    /** Models the key can use, for the picker in AI settings. */
+    /** Modelos que a chave pode usar, para o seletor nas configurações de IA. */
     suspend fun models(p: AiProvider, key: String, base: String): List<String> = withContext(Dispatchers.IO) {
         when (p) {
             AiProvider.GEMINI -> get(Request.Builder().url("${root(p, base)}/models?pageSize=200").header("x-goog-api-key", key).build())["models"]?.jsonArray.orEmpty().map { it.jsonObject }
@@ -175,7 +175,7 @@ object AlphaStoreAi {
         }.sorted()
     }
 
-    private fun root(p: AiProvider, base: String) = (if (p == AiProvider.CUSTOM) base.trim() else p.base).trimEnd('/').ifEmpty { throw AiError("Add the server address in AI settings.") }
+    private fun root(p: AiProvider, base: String) = (if (p == AiProvider.CUSTOM) base.trim() else p.base).trimEnd('/').ifEmpty { throw AiError("Adicione o endereço do servidor nas configurações de IA.") }
 
     private fun authed(p: AiProvider, key: String, b: Request.Builder) = b.apply {
         if (key.isNotBlank()) header("Authorization", "Bearer $key")
@@ -186,10 +186,10 @@ object AlphaStoreAi {
         val e = runCatching { json.parseToJsonElement(body).jsonObject["error"] }.getOrNull()
         val msg = (e as? JsonObject)?.get("message")?.jsonPrimitive?.contentOrNull ?: (e as? JsonPrimitive)?.contentOrNull
         return AiError(when (code) {
-            401, 403 -> "The provider refused this key. Check it in AI settings."
-            404 -> if (model.isNotEmpty()) "The model $model was not found. Pick another one in AI settings." else "The provider address was not found."
-            429 -> "Rate limit or quota reached. Wait a moment, or check your plan with the provider."
-            else -> msg?.take(200) ?: "The provider answered with error $code."
+            401, 403 -> "O provedor recusou esta chave. Confira nas configurações de IA."
+            404 -> if (model.isNotEmpty()) "O modelo $model não foi encontrado. Escolha outro nas configurações de IA." else "O endereço do provedor não foi encontrado."
+            429 -> "Limite de taxa ou cota atingida. Espere um momento ou verifique seu plano com o provedor."
+            else -> msg?.take(200) ?: "O provedor respondeu com erro $code."
         })
     }
 
@@ -197,11 +197,11 @@ object AlphaStoreAi {
         http.newCall(req).execute().use { r ->
             val text = r.body.string()
             if (!r.isSuccessful) throw fail(r.code, text, "")
-            runCatching { json.parseToJsonElement(text).jsonObject }.getOrNull() ?: throw AiError("The provider sent something AlphaStore could not read.")
+            runCatching { json.parseToJsonElement(text).jsonObject }.getOrNull() ?: throw AiError("O provedor enviou algo que o AlphaStore não conseguiu ler.")
         }
-    } catch (e: java.io.IOException) { throw AiError("Could not reach the provider. Check your connection.") }
+    } catch (e: java.io.IOException) { throw AiError("Não foi possível alcançar o provedor. Verifique sua conexão.") }
 
-    /** Server-sent events: each "data:" line is one JSON chunk. Cancelling the coroutine cancels the call, which is what Stop does. */
+    /** Eventos enviados pelo servidor: cada linha "data:" é um pedaço JSON. Cancelar o coroutine cancela a chamada, que é o que o botão Parar faz. */
     private suspend fun sse(req: Request, model: String, onChunk: (JsonObject) -> Unit) = withContext(Dispatchers.IO) {
         val call = http.newCall(req)
         val hook = coroutineContext[Job]?.invokeOnCompletion { call.cancel() }
@@ -216,13 +216,13 @@ object AlphaStoreAi {
                     val d = line.substring(5).trim()
                     if (d == "[DONE]") break
                     runCatching { json.parseToJsonElement(d).jsonObject }.getOrNull()?.let { o ->
-                        o["error"]?.let { throw AiError((it as? JsonObject)?.get("message")?.jsonPrimitive?.contentOrNull ?: "The provider stopped with an error.") }
+                        o["error"]?.let { throw AiError((it as? JsonObject)?.get("message")?.jsonPrimitive?.contentOrNull ?: "O provedor parou com um erro.") }
                         onChunk(o)
                     }
                 }
             }
         } catch (e: java.io.IOException) {
-            coroutineContext.ensureActive(); throw AiError("Could not reach the provider. Check your connection.")
+            coroutineContext.ensureActive(); throw AiError("Não foi possível alcançar o provedor. Verifique sua conexão.")
         } finally { hook?.dispose() }
     }
 

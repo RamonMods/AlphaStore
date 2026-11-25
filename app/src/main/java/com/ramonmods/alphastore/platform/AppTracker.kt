@@ -71,7 +71,7 @@ private val DANGEROUS = setOf(
     "android.permission.MANAGE_EXTERNAL_STORAGE",
 )
 
-/** Native port of AppTrackerPlugin.java. Download engine lives in [Downloads]. */
+/** Port nativo de AppTrackerPlugin.java. O motor de download vive em [Downloads]. */
 class AppTracker(private val ctx: Context) {
     private val pm = ctx.packageManager
     private val GRANTED = PackageManager.PERMISSION_GRANTED
@@ -87,15 +87,15 @@ class AppTracker(private val ctx: Context) {
 
     fun labelOf(pkg: String): String = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
 
-    /** Big lookups read one package list instead of a getPackageInfo binder call (plus a NameNotFound exception) per candidate:
-     *  a catalog sync probes about 12 package-name variants per app, which used to be ~12k IPCs on every boot. */
+    /** Consultas grandes leem uma lista de pacotes em vez de uma chamada binder de getPackageInfo (mais uma exceção NameNotFound) por candidato:
+     *  sincronizar o catálogo varre uns 12 variants de nome de pacote por app, que antes faziam ~12k IPCs a cada boot. */
     fun appInfos(pkgs: Collection<String>): Map<String, PkgInfo> {
         if (pkgs.size <= 24) return pkgs.associateWith(::appInfo)
         val all = installedInfos() ?: return pkgs.associateWith(::appInfo)
         return pkgs.associateWith { all[it] ?: PkgInfo(false) }
     }
 
-    /** Every installed package in one call. Some OEM builds throw on the full list (oversized binder reply): null, so callers fall back to per-package lookups. */
+    /** Todos os pacotes instalados em uma chamada. Algumas builds OEM lançam na lista completa (resposta binder oversized): null, então os chamadores voltam para buscas por pacote. */
     fun installedInfos(): Map<String, PkgInfo>? = runCatching {
         pm.getInstalledPackages(0).associate { it.packageName to PkgInfo(true, it.versionName.orEmpty(), PackageInfoCompat.getLongVersionCode(it)) }
     }.getOrNull()
@@ -138,8 +138,8 @@ class AppTracker(private val ctx: Context) {
         pi.signingInfo?.let { if (it.hasMultipleSigners()) it.apkContentsSigners else it.signingCertificateHistory }.orEmpty().map { it.toCharsString() }.toSet()
     else pi.signatures.orEmpty().map { it.toCharsString() }.toSet()
 
-    /** The APK's package and why Android will refuse it, or null when nothing on the phone (any profile, kept data, system image) has a different signer.
-     *  Signer histories overlapping means a key rotation, which Android accepts. */
+    /** O pacote do APK e por que o Android vai recusá-lo, ou null quando nada no telefone (qualquer perfil, dados mantidos, imagem do sistema) tem um signer diferente.
+     *  Históricos de signer com sobreposição significam rotação de chave, que o Android aceita. */
     @Suppress("DEPRECATION")
     fun clash(f: File): Pair<String, Clash>? = runCatching {
         val flag = if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
@@ -179,7 +179,7 @@ class AppTracker(private val ctx: Context) {
                 ?: handlers.firstOrNull { "packageinstaller" in it.packageName } ?: handlers.firstOrNull { isSys(it.applicationInfo) }
         }
         // AlphaStore is an installer too now: never offer itself for the store's own installs
-        val intent = pick?.let { Intent(base).setClassName(it.packageName, it.name) } ?: Intent.createChooser(base, "Install App")
+        val intent = pick?.let { Intent(base).setClassName(it.packageName, it.name) } ?: Intent.createChooser(base, "Instalar App")
             .putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, arrayOf(android.content.ComponentName(ctx, com.ramonmods.alphastore.ui.ApkInstallActivity::class.java)))
         when (ResultHost.run(intent).first) {
             Activity.RESULT_OK -> Unit
@@ -210,7 +210,7 @@ class AppTracker(private val ctx: Context) {
     fun shizukuRunning() = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
     fun elevatedReady() = root || runCatching { Shizuku.pingBinder() && Shizuku.checkSelfPermission() == GRANTED }.getOrDefault(false)
 
-    /** Asks the root manager for `su` (Magisk, KernelSU and APatch show their grant prompt here). */
+    /** Pede `su` ao gerenciador raiz (Magisk, KernelSU e APatch mostram o prompt de concede aqui). */
     suspend fun requestRoot(): Boolean = withContext(Dispatchers.IO) {
         runCatching {
             val p = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
@@ -221,7 +221,7 @@ class AppTracker(private val ctx: Context) {
     suspend fun requestElevated() {
         if (root) return
         try {
-            if (!Shizuku.pingBinder()) throw NativeError("Shizuku is NOT running. Start Shizuku or Shizuku-Next first.")
+            if (!Shizuku.pingBinder()) throw NativeError("O Shizuku não está em execução. Inicie o Shizuku ou Shizuku-Next primeiro.")
             if (Shizuku.checkSelfPermission() == GRANTED) return
             val ok = suspendCancellableCoroutine { c ->
                 val l = object : Shizuku.OnRequestPermissionResultListener {
@@ -233,8 +233,8 @@ class AppTracker(private val ctx: Context) {
                 Shizuku.addRequestPermissionResultListener(l); Shizuku.requestPermission(SHIZUKU_CODE)
                 c.invokeOnCancellation { Shizuku.removeRequestPermissionResultListener(l) }
             }
-            if (!ok) throw NativeError("User denied Shizuku permission.")
-        } catch (e: NativeError) { throw e } catch (e: Throwable) { throw NativeError("Shizuku Error (Check Manifest/Provider): ${e.message}") }
+            if (!ok) throw NativeError("Permissão do Shizuku negada pelo usuário.")
+        } catch (e: NativeError) { throw e } catch (e: Throwable) { throw NativeError("Erro do Shizuku (Verifique Manifest/Provider): ${e.message}") }
     }
 
     private fun sh(cmd: String): Process = if (root) Runtime.getRuntime().exec(arrayOf("su", "-c", cmd)) else Shizuku::class.java
@@ -243,23 +243,23 @@ class AppTracker(private val ctx: Context) {
 
     private fun Process.err() = errorStream.bufferedReader().readText()
 
-    /** Runs one shell command through the elevated shell (root or Shizuku) and returns its output; throws on a non-zero exit. */
+    /** Roda um comando shell pelo shell elevado (root ou Shizuku) e retorna sua saída; lança em saída diferente de zero. */
     suspend fun runPrivileged(cmd: String): String = withContext(Dispatchers.IO) {
         requireShizuku()
         val p = sh(cmd); val out = p.inputStream.bufferedReader().readText(); val code = p.waitFor()
-        if (code != 0) throw NativeError("${out.trim()} ${p.err()}".trim().ifEmpty { "Command failed ($code)" })
+        if (code != 0) throw NativeError("${out.trim()} ${p.err()}".trim().ifEmpty { "Comando falhou ($code)" })
         out
     }
 
     private fun requireShizuku() {
         if (root) return
-        if (!shizukuRunning()) throw NativeError("Shizuku not running")
-        if (Shizuku.checkSelfPermission() != GRANTED) throw NativeError("Shizuku permission missing")
+        if (!shizukuRunning()) throw NativeError("O Shizuku não está em execução")
+        if (Shizuku.checkSelfPermission() != GRANTED) throw NativeError("Permissão do Shizuku ausente")
     }
 
     private fun streamDropped(msg: String?) = msg != null && (msg.contains("stream closed", true) || msg.contains("broken pipe", true))
 
-    /** Streams the APK into `pm install`. Root also records AlphaStore as the installer, so Android's "App details in store" and update ownership point here. */
+    /** Transmite o APK para o `pm install`. O root também grava o AlphaStore como instalador, então o "Detalhes do app na store" do Android e a propriedade de atualizações apontam aqui. */
     suspend fun installShizuku(fileName: String, lock: Boolean = false, opts: Collection<String> = emptyList()) = withContext(Dispatchers.IO) {
         val raw = resolve(fileName)
         val parts = Bundles.parts(ctx, raw)
@@ -287,7 +287,7 @@ class AppTracker(private val ctx: Context) {
                 runCatching { p.destroy() }
                 return -1 to (e.message ?: "Stream closed")
             }
-            // pm prints "Failure [INSTALL_FAILED_...]" on stdout, the part that says why
+            // O pm imprime "Failure [INSTALL_FAILED_...]" no stdout, a parte que diz o porquê
             val out = p.inputStream.bufferedReader().readText(); val code = p.waitFor()
             return (if (code == 0 && "Failure" in out) 1 else code) to "${out.trim()} ${p.err()}".trim()
         }
@@ -299,12 +299,12 @@ class AppTracker(private val ctx: Context) {
         if (code != 0 && streamDropped(err)) {
             val (status, msg) = SessionInstall.commit(ctx, listOf(f), null, true)
             if (status == android.content.pm.PackageInstaller.STATUS_SUCCESS || status == android.content.pm.PackageInstaller.STATUS_PENDING_USER_ACTION) return@withContext
-            throw NativeError(msg ?: "Install failed (Code $code): $err")
+            throw NativeError(msg ?: "Instalação falhou (Código $code): $err")
         }
-        if (code != 0) throw NativeError("Install failed (Code $code): $err")
+        if (code != 0) throw NativeError("Instalação falhou (Código $code): $err")
     }
 
-    /** Split bundles: pm install-create, then one stdin write per APK, then commit. */
+    /** Bundles divididos: pm install-create, depois um write no stdin por APK, depois commit. */
     private fun installMany(files: List<File>, opts: Collection<String>) {
         val owner = if (root) " -i ${ctx.packageName}" + if (Build.VERSION.SDK_INT >= 34) "" else "" else ""
         val args = installArgs(opts, Build.VERSION.SDK_INT, owner)
@@ -328,30 +328,30 @@ class AppTracker(private val ctx: Context) {
         }
     }
 
-    /** Root: reinstalls an app's own APKs with AlphaStore as installer. Same signature and version, so data stays; AlphaStore then owns its updates. */
+    /** Root: reinstala os próprios APKs de um app com o AlphaStore como instalador. Mesma assinatura e versão, então os dados ficam; depois o AlphaStore é dono das atualizações. */
     suspend fun adopt(pkg: String) = withContext(Dispatchers.IO) {
-        val dir = File(pm.getApplicationInfo(pkg, 0).sourceDir).parent ?: throw NativeError("No APK path")
+        val dir = File(pm.getApplicationInfo(pkg, 0).sourceDir).parent ?: throw NativeError("Nenhum caminho de APK")
         val p = sh("pm install -r -i ${ctx.packageName} \"$dir\"/*.apk")
-        val code = p.waitFor(); if (code != 0) throw NativeError("Adopt failed (Code $code): ${p.err()}")
+        val code = p.waitFor(); if (code != 0) throw NativeError("Falha na adoção (Código $code): ${p.err()}")
     }
 
-    /** Root or Shizuku: user apps AlphaStore did not install, as package to installer label. */
+    /** Root ou Shizuku: apps de usuário que o AlphaStore não instalou, retornados como pacote e rótulo do instalador. */
     @Suppress("DEPRECATION")
     fun foreignInstalls(pkgs: Collection<String>): Map<String, String> = pkgs.mapNotNull { p ->
         runCatching {
             if (isSys(pm.getApplicationInfo(p, 0))) return@runCatching null
             val by = if (Build.VERSION.SDK_INT >= 30) pm.getInstallSourceInfo(p).installingPackageName else pm.getInstallerPackageName(p)
-            if (by == ctx.packageName) null else p to (by?.let { runCatching { pm.getApplicationLabel(pm.getApplicationInfo(it, 0)).toString() }.getOrDefault(it) } ?: "Sideloaded")
+            if (by == ctx.packageName) null else p to (by?.let { runCatching { pm.getApplicationLabel(pm.getApplicationInfo(it, 0)).toString() }.getOrDefault(it) } ?: "Instalado por sideload")
         }.getOrNull()
     }.toMap()
 
-    /** Frees cache across every app at once: Android trims until the requested space is free. */
+    /** Libera cache de todos os apps de uma vez: o Android recorta até o espaço solicitado ficar livre. */
     suspend fun trimCaches() = withContext(Dispatchers.IO) {
-        requireShizuku(); val p = sh("pm trim-caches 1024G"); if (p.waitFor() != 0) throw NativeError("Trim failed: ${p.err()}")
+        requireShizuku(); val p = sh("pm trim-caches 1024G"); if (p.waitFor() != 0) throw NativeError("Falha ao limpar caches: ${p.err()}")
     }
 
-    /** Every installed package with its info. One list call can fail on OEM builds with many apps (oversized binder reply),
-     *  so that falls back to the light app list plus one lookup per package. */
+    /** Todos os pacotes instalados com informações deles. Uma chamada de lista pode falhar em builds OEM com muitos apps
+     *  (resposta binder oversized), então isso volta para a lista leve de apps mais uma busca por pacote. */
     @Suppress("DEPRECATION")
     private fun packages(flags: Int): List<PackageInfo> = runCatching { pm.getInstalledPackages(flags) }.getOrNull()?.takeIf { it.isNotEmpty() }
         ?: pm.getInstalledApplications(flags and PackageManager.MATCH_UNINSTALLED_PACKAGES).mapNotNull { runCatching { pm.getPackageInfo(it.packageName, flags) }.getOrNull() }
@@ -366,7 +366,7 @@ class AppTracker(private val ctx: Context) {
         }
     }
 
-    /** Every app on the phone, removed-for-this-user ones included, for Debloat. */
+    /** Todos os apps do telefone, incluindo os removidos para este usuário, para o Debloat. */
     @Suppress("DEPRECATION")
     suspend fun systemApps(): List<SysApp> = withContext(Dispatchers.IO) {
         pm.getInstalledApplications(PackageManager.MATCH_UNINSTALLED_PACKAGES).filter { it.packageName != ctx.packageName }.map { ai ->
@@ -380,11 +380,11 @@ class AppTracker(private val ctx: Context) {
         val p = sh(if (enable) "cmd package install-existing $pkg" else "pm uninstall -k --user 0 $pkg")
         // pm reports "Failure [...]" on stdout, and some ROMs still exit 0
         val out = p.inputStream.bufferedReader().readText(); val exit = p.waitFor()
-        if (exit != 0 || "Failure" in out) throw NativeError("Operation failed (Code $exit): ${out.trim()} ${p.err()}".trim())
+        if (exit != 0 || "Failure" in out) throw NativeError("Operação falhou (Código $exit): ${out.trim()} ${p.err()}".trim())
     }
 
     suspend fun revokePermission(pkg: String, perm: String) = withContext(Dispatchers.IO) {
-        requireShizuku(); if (sh("pm revoke $pkg $perm").waitFor() != 0) throw NativeError("Revoke failed. App might crash or restart.")
+        requireShizuku(); if (sh("pm revoke $pkg $perm").waitFor() != 0) throw NativeError("Falha na revogação. O app pode travar ou reiniciar.")
     }
 
     @Suppress("DEPRECATION")
@@ -395,15 +395,15 @@ class AppTracker(private val ctx: Context) {
             val pub = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             val dest = File(pub, name)
             if (elevatedReady() && runCatching { sh("cp \"${ai.sourceDir}\" \"${dest.absolutePath}\"").waitFor() == 0 }.getOrDefault(false)) return@withContext dest.absolutePath
-            // Note: falls back to app-private Downloads when public storage is not writable (scoped storage), path stays readable for hashing
+            // Nota: cai para o Downloads privado do app quando o armazenamento público não é gravável (armazenamento com escopo), o caminho continua legível para hashing
             val out = runCatching { File(ai.sourceDir).copyTo(dest, true) }.getOrElse { File(ai.sourceDir).copyTo(File(Downloads.dir(), name), true) }
             out.absolutePath
-        } catch (e: Exception) { throw NativeError("Extraction failed: ${e.message}") }
+        } catch (e: Exception) { throw NativeError("Falha na extração: ${e.message}") }
     }
 
     fun hash(path: String): String {
-        val f = File(path); if (!f.exists()) throw NativeError("File not found")
-        return hashOrNull(f) ?: throw NativeError("Hash failed")
+        val f = File(path); if (!f.exists()) throw NativeError("Arquivo não encontrado")
+        return hashOrNull(f) ?: throw NativeError("Falha no hash")
     }
 
     private fun hashOrNull(f: File): String? = runCatching {
@@ -412,9 +412,9 @@ class AppTracker(private val ctx: Context) {
         d.digest().joinToString("") { "%02x".format(it) }
     }.getOrNull()
 
-    /** Returns (httpStatus, body), mirrors uploadVirusTotalFile including the 32 MB upload_url hop. */
+    /** Retorna (httpStatus, body), espelha uploadVirusTotalFile incluindo o salto de upload_url de 32 MB. */
     suspend fun vtUpload(path: String, apiKey: String): Pair<Int, String> = withContext(Dispatchers.IO) {
-        if (path.isEmpty() || apiKey.isEmpty()) throw NativeError("Missing args")
+        if (path.isEmpty() || apiKey.isEmpty()) throw NativeError("Argumentos ausentes")
         val f = File(path).canonicalFile; if (!f.exists() || !f.canRead()) throw NativeError("FILE_MISSING")
         var uploadUrl = "https://www.virustotal.com/api/v3/files"
         if (f.length() >= 32L * 1024 * 1024) {
@@ -422,20 +422,20 @@ class AppTracker(private val ctx: Context) {
             try {
                 c.newCall(Request.Builder().url("https://www.virustotal.com/api/v3/files/upload_url").header("x-apikey", apiKey).header("Accept", "application/json").build()).execute().use { r ->
                     val b = r.body.string()
-                    if (!r.isSuccessful) return@withContext r.code to b.ifEmpty { "Failed to retrieve upload URL" }
+                    if (!r.isSuccessful) return@withContext r.code to b.ifEmpty { "Falha ao obter a URL de upload" }
                     uploadUrl = com.ramonmods.alphastore.data.json.parseToJsonElement(b).jsonObject["data"]!!.jsonPrimitive.content
                 }
-            } catch (e: Exception) { throw NativeError("Failed to obtain VirusTotal upload URL: ${e.message}") }
+            } catch (e: Exception) { throw NativeError("Falha ao obter a URL de upload do VirusTotal: ${e.message}") }
         }
         val c = Net.client.newBuilder().callTimeout(0, TimeUnit.MILLISECONDS).connectTimeout(30, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).writeTimeout(0, TimeUnit.MILLISECONDS).build()
         val body = MultipartBody.Builder("----alphastorevt" + System.currentTimeMillis()).setType(MultipartBody.FORM)
             .addFormDataPart("file", f.name, f.asRequestBody(APK_MIME.toMediaType())).build()
         try {
             c.newCall(Request.Builder().url(uploadUrl).post(body).header("x-apikey", apiKey).header("Accept", "application/json").build()).execute().use { it.code to it.body.string() }
-        } catch (e: Exception) { throw NativeError(e.message ?: "Upload failed") }
+        } catch (e: Exception) { throw NativeError(e.message ?: "Falha no envio") }
     }
 
-    /** Walks shared storage hashing files over 1 KB, emitting batches of 50 (scanResultBatch / scanComplete). */
+    /** Caminha pelo armazenamento compartilhado calculando hash de arquivos acima de 1 KB, emitindo lotes de 50 (scanResultBatch / scanComplete). */
     @Suppress("DEPRECATION")
     suspend fun scanDirectory(onBatch: suspend (List<Pair<String, String>>) -> Unit) = withContext(Dispatchers.IO) {
         val batch = ArrayList<Pair<String, String>>()
@@ -484,23 +484,23 @@ class AppTracker(private val ctx: Context) {
     @Suppress("DEPRECATION")
     suspend fun exportFile(name: String): String = withContext(Dispatchers.IO) {
         val src = Downloads.file(name) ?: throw NativeError("INVALID_FILE_NAME")
-        if (!src.exists()) throw NativeError("File not found")
+        if (!src.exists()) throw NativeError("Arquivo não encontrado")
         try {
             val pub = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).apply { mkdirs() }
             val dot = name.lastIndexOf('.'); val stem = if (dot > 0) name.take(dot) else name; val ext = if (dot > 0) name.substring(dot) else ""
             var dest = File(pub, name); var i = 1
             while (dest.exists()) dest = File(pub, "${stem}_${i++}$ext")
             src.copyTo(dest)
-            if (dest.length() != src.length()) throw NativeError("Verification failed")
+            if (dest.length() != src.length()) throw NativeError("Falha na verificação")
             src.delete(); dest.absolutePath
-        } catch (e: NativeError) { throw e } catch (e: Exception) { throw NativeError("Export failed: ${e.message}") }
+        } catch (e: NativeError) { throw e } catch (e: Exception) { throw NativeError("Falha na exportação: ${e.message}") }
     }
 
     suspend fun saveFile(content: String, fileName: String) {
         val i = Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/octet-stream").putExtra(Intent.EXTRA_TITLE, fileName)
         val (code, data) = ResultHost.run(i)
-        val uri: Uri = data?.data?.takeIf { code == Activity.RESULT_OK } ?: throw NativeError("Cancelled")
-        withContext(Dispatchers.IO) { (ctx.contentResolver.openOutputStream(uri) ?: throw NativeError("Stream error")).use { it.write(content.toByteArray()) } }
+        val uri: Uri = data?.data?.takeIf { code == Activity.RESULT_OK } ?: throw NativeError("Cancelado")
+        withContext(Dispatchers.IO) { (ctx.contentResolver.openOutputStream(uri) ?: throw NativeError("Erro de stream")).use { it.write(content.toByteArray()) } }
     }
 
     fun setHighRefreshRate(a: Activity, enable: Boolean) {
@@ -517,7 +517,7 @@ class AppTracker(private val ctx: Context) {
     fun share(title: String, text: String, url: String) = ctx.startActivity(
         Intent.createChooser(Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT, "$text $url").setType("text/plain"), title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 
-    fun launch(pkg: String) = ctx.startActivity((pm.getLaunchIntentForPackage(pkg) ?: pm.getLeanbackLaunchIntentForPackage(pkg) ?: throw NativeError("App not found")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    fun launch(pkg: String) = ctx.startActivity((pm.getLaunchIntentForPackage(pkg) ?: pm.getLeanbackLaunchIntentForPackage(pkg) ?: throw NativeError("App não encontrado")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     fun uninstall(pkg: String) = ctx.startActivity(Intent(Intent.ACTION_DELETE, "package:$pkg".toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 
     /** Android's own uninstall prompt, returning once the user answered it. */
@@ -528,10 +528,10 @@ class AppTracker(private val ctx: Context) {
 
     /** Root or Shizuku: removes the app without a system prompt (AlphaStore asks first). */
     suspend fun uninstallSilent(pkg: String) = withContext(Dispatchers.IO) {
-        if (!pkg.matches(Regex("[A-Za-z0-9_.]+"))) throw NativeError("Invalid package name")
+        if (!pkg.matches(Regex("[A-Za-z0-9_.]+"))) throw NativeError("Nome de pacote inválido")
         requireShizuku()
         val p = sh("pm uninstall $pkg"); val out = p.inputStream.bufferedReader().readText(); val code = p.waitFor()
-        if (code != 0 || "Success" !in out) throw NativeError("Uninstall failed: ${out.trim()} ${p.err()}".trim())
+        if (code != 0 || "Success" !in out) throw NativeError("Falha na desinstalação: ${out.trim()} ${p.err()}".trim())
     }
     /** Turns on the launcher alias for icon [id] (see APP_ICONS) before turning the others off, so the app never drops off the launcher. */
     fun setLauncherIcon(id: String) {

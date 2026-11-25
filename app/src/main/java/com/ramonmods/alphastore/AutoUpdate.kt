@@ -35,15 +35,15 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Background updates that run with AlphaStore closed, and across reboots (persisted job).
- * Each pass: refresh the catalog, read installed versions from Android itself, download what is newer, check the APK is the
- * same package, then install it over the existing app. Root and Shizuku install anything; without them Android 12+ installs
- * updates silently for apps AlphaStore installed. Whatever can't finish here is logged, kept ready to install, and reported on the next start.
+ * Atualizações em segundo plano que rodam com o AlphaStore fechado, e nas reinicializações (job persistido).
+ * Cada ciclo: atualiza o catálogo, lê as versões instaladas do Android mesmo, baixa o que é mais novo, verifica que o APK é o
+ * mesmo pacote, depois instala sobre o app existente. Root e Shizuku instalam tudo; sem eles o Android 12+ instala
+ * atualizações silenciosamente para apps que o AlphaStore instalou. O que não terminar aqui é registrado, mantido pronto para instalar, e reportado no próximo início.
  */
 object AutoUpdate {
     private const val JOB_ID = 7340
     private const val CHANNEL = "alphastore_updates"
-    /** Set by AlphaStoreActivity: while the store is on screen it handles updates itself, so the job steps aside. */
+    /** Setado pelo AlphaStoreActivity: enquanto a loja está na tela ela cuida das atualizações, então o job recua. */
     @Volatile var uiVisible = false
 
     @Suppress("DEPRECATION")
@@ -109,28 +109,28 @@ object AutoUpdate {
         Store.data.update { st -> st.copy(orbit = st.orbit.map { cur -> orbit[cur.id]?.let { f -> cur.copy(versions = f.versions, checkedAt = f.checkedAt, error = f.error) } ?: cur }) }
     }
 
-    /** One app: download (or reuse a finished download), verify, install. Null = nothing worth reporting (download-only mode). */
+    /** Um app: baixa (ou reusa um download concluído), verifica, instala. Null = nada para reportar (modo somente download). */
     private suspend fun update(ctx: Context, tracker: AppTracker, app: AppItem, s: Settings): AutoResult? {
         val pkg = s.resolvedPackageNames[app.id] ?: app.packageName.orEmpty()
         val version = downloadVersionMeta(app, null, s.streamOf(app.id)).first
         fun result(ok: Boolean, error: String? = null) = AutoResult(app.id, app.name, version, ok, error, System.currentTimeMillis())
-        // The build of the app's own channel: a Beta user gets the next Beta, not the Stable APK under a Beta version
+        // A build do próprio canal do app: um usuário Beta recebe o próximo Beta, não o APK Stable sob uma versão Beta
         val variants = app.availableVersions.firstOrNull { it.version == version }?.variants?.ifEmpty { null } ?: app.variants
         val raw = variants.firstOrNull()?.url ?: app.downloadUrl
         val url = sanitizeDownloadUrl(try { Orbit.privateDownloadUrl(raw, s.orbitTokens()) } catch (_: Exception) { raw })
-        if (url == "#" || !url.startsWith("http")) return result(false, "No direct APK download for this app.")
+        if (url == "#" || !url.startsWith("http")) return result(false, "Nenhum download direto de APK deste app.")
         val name = apkFileName(app, version)
-        val f = Downloads.file(name) ?: return result(false, "Invalid file name.")
+        val f = Downloads.file(name) ?: return result(false, "Nome de arquivo inválido.")
         if (!f.exists() || f.length() == 0L) {
-            runCatching { Downloads.start(url, name) }.onFailure { return result(false, "Download could not start.") }
+            runCatching { Downloads.start(url, name) }.onFailure { return result(false, "O download não pôde ser iniciado.") }
             val st = withTimeoutOrNull(20 * 60_000L) { Downloads.state.first { it[name]?.status != DlStatus.RUNNING } }?.get(name)?.status
             Downloads.forget(name)
-            if (st != DlStatus.SUCCESSFUL || Downloads.status(name).status != DlStatus.SUCCESSFUL) return result(false, "Download failed. AlphaStore retries on its next pass.")
+            if (st != DlStatus.SUCCESSFUL || Downloads.status(name).status != DlStatus.SUCCESSFUL) return result(false, "Download falhou. O AutoUpdate tenta de novo no próximo ciclo.")
         }
-        // Never install something other than what is installed: a wrong or tampered file stops here
+        // Nunca instala algo diferente do que está instalado: um arquivo errado ou adulterado para aqui
         val actual = withContext(Dispatchers.IO) { if (tracker.isValidApk(f)) tracker.archivePackage(f) else null }
-        if (actual == null) { f.delete(); return result(false, "The downloaded file is not a valid APK.") }
-        if (pkg.isNotEmpty() && actual != pkg) { f.delete(); return result(false, "The download is a different app ($actual), so it was not installed.") }
+        if (actual == null) { f.delete(); return result(false, "O arquivo baixado não é um APK válido.") }
+        if (pkg.isNotEmpty() && actual != pkg) { f.delete(); return result(false, "O download é de um app diferente ($actual), então não foi instalado.") }
         val now = System.currentTimeMillis()
         Store.data.update { if (app.id in it.readyToInstall) it else it.completeDownload(app.id, name, now) }
         if (!s.autoInstall) { notifyReady(ctx, app, name); return null }
@@ -145,19 +145,19 @@ object AutoUpdate {
         return result(true)
     }
 
-    /** Null on success, else why it failed, worded for the user. Also used by the store for auto-updates it downloads itself. */
+    /** Null em sucesso; senão o motivo da falha, redigitado para o usuário. Também usado pela loja para atualizações automáticas que ela própria baixa. */
     suspend fun install(ctx: Context, tracker: AppTracker, s: Settings, f: File, pkg: String, name: String): String? {
         tracker.clash(f)?.let { return clashText(it.second, name).second }
         if (s.rootMode || s.useShizuku) return runCatching { tracker.installShizuku(f.name, s.updateLock, if (s.installOptions) s.installFlags else emptyList()) }.exceptionOrNull()?.let { installFailureText(it.message, name).second }
         if (s.useDhizuku) return runCatching { DhizukuBridge.install(ctx, f) }.exceptionOrNull()?.let { installFailureText(it.message, name).second }
         // Skip the 24-hour wait: the same shell-user install as the button, falling back to a session when adbd is unreachable
         if (s.directInstall && WirelessAdb.supported && runCatching { WirelessAdb.install(ctx, f) }.isSuccess) return null
-        if (Build.VERSION.SDK_INT < 31) return "Android ${Build.VERSION.RELEASE} needs you to confirm installs. Root or Shizuku make them silent."
-        if (!tracker.canRequestInstalls()) return "Allow AlphaStore to install apps, then updates can install on their own."
+        if (Build.VERSION.SDK_INT < 31) return "O Android ${Build.VERSION.RELEASE} precisa que você confirme as instalações. Root ou Shizuku tornam-nas silenciosas."
+        if (!tracker.canRequestInstalls()) return "Permita que o AlphaStore instale apps, depois as atualizações podem instalar por conta própria."
         val (status, msg) = sessionInstall(ctx, f, pkg)
         return when (status) {
             PackageInstaller.STATUS_SUCCESS -> null
-            PackageInstaller.STATUS_PENDING_USER_ACTION -> "Android asked to confirm this one. That happens for apps another store installed, or apps built for an old Android version."
+            PackageInstaller.STATUS_PENDING_USER_ACTION -> "O Android pediu confirmação deste. Isso acontece para apps de outra loja, ou apps construídos para uma versão antiga do Android."
             else -> installFailureText(msg, name).second
         }
     }
@@ -165,7 +165,7 @@ object AutoUpdate {
 
     private val sessions = ConcurrentHashMap<Int, CompletableDeferred<Pair<Int, String?>>>()
 
-    /** PackageInstaller session that asks for no user action. Android allows it for apps AlphaStore installed (Android 12+). */
+    /** Sessão do PackageInstaller que não pede ação do usuário. O Android permite para apps que o AlphaStore instalou (Android 12+). */
     private suspend fun sessionInstall(ctx: Context, f: File, pkg: String): Pair<Int, String?> = withContext(Dispatchers.IO) {
         val parts = com.ramonmods.alphastore.platform.Bundles.parts(ctx, f).ifEmpty { listOf(f) }
         val pi = ctx.packageManager.packageInstaller
@@ -182,13 +182,13 @@ object AutoUpdate {
                 val i = Intent(ctx, InstallReceiver::class.java).setPackage(ctx.packageName)
                 session.commit(PendingIntent.getBroadcast(ctx, id, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE).intentSender)
             }
-            withTimeoutOrNull(3 * 60_000L) { done.await() } ?: (PackageInstaller.STATUS_FAILURE to "Android did not answer in time. AlphaStore retries on its next pass.")
+            withTimeoutOrNull(3 * 60_000L) { done.await() } ?: (PackageInstaller.STATUS_FAILURE to "O Android não respondeu a tempo. O AutoUpdate tenta de novo no próximo ciclo.")
         } catch (e: Exception) {
             runCatching { pi.abandonSession(id) }; PackageInstaller.STATUS_FAILURE to e.message
         } finally { sessions -= id }
     }
 
-    /** Session results. A pending confirmation is abandoned: the file stays ready, and the user installs it with one tap from the notification. */
+    /** Resultados da sessão. Uma confirmação pendente é abandonada: o arquivo fica pronto, e o usuário instala com um toque na notificação. */
     fun onInstallResult(ctx: Context, i: Intent) {
         if (com.ramonmods.alphastore.platform.SessionInstall.onResult(ctx, i)) return
         val id = i.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1)
@@ -198,15 +198,15 @@ object AutoUpdate {
     }
 
     private fun channel(ctx: Context) = NotificationManagerCompat.from(ctx).createNotificationChannel(
-        NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_DEFAULT).setName("AlphaStore Updates").build())
+        NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_DEFAULT).setName("Atualizações do AlphaStore").build())
 
-    /** Opens the app's page with the file ready, the same extras the store's own "ready" notification uses. */
+    /** Abre a página do app com o arquivo pronto, os mesmos extras que a notificação de "pronto" da loja usa. */
     private fun notifyReady(ctx: Context, app: AppItem, file: String, error: String? = null) = runCatching {
         channel(ctx)
         val i = Intent(ctx, AlphaStoreActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("appId", app.id).putExtra("fileName", file)
         NotificationManagerCompat.from(ctx).notify(app.id.hashCode(), NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle(if (error == null) "${app.name} update ready" else "${app.name} needs you").setContentText(error ?: "Tap to install.")
-            .setStyle(NotificationCompat.BigTextStyle().bigText(error ?: "Tap to install.")).setAutoCancel(true)
+            .setContentTitle(if (error == null) "${app.name}: atualização pronta" else "${app.name} precisa de você").setContentText(error ?: "Toque para instalar.")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(error ?: "Toque para instalar.")).setAutoCancel(true)
             .setContentIntent(PendingIntent.getActivity(ctx, app.id.hashCode(), i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
     }
 
@@ -215,7 +215,7 @@ object AutoUpdate {
         channel(ctx)
         val launch = ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)
         NotificationManagerCompat.from(ctx).notify(JOB_ID, NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(com.ramonmods.alphastore.R.drawable.ic_launcher_monochrome)
-            .setContentTitle(if (ok.size == 1) "${ok[0].name} updated" else "${ok.size} apps updated").setContentText(ok.joinToString { it.name }).setAutoCancel(true)
+            .setContentTitle(if (ok.size == 1) "${ok[0].name} atualizado" else "${ok.size} apps atualizados").setContentText(ok.joinToString { it.name }).setAutoCancel(true)
             .apply { launch?.let { setContentIntent(PendingIntent.getActivity(ctx, JOB_ID, it, PendingIntent.FLAG_IMMUTABLE)) } }.build())
     }
 }
@@ -227,7 +227,7 @@ class AutoUpdateJob : JobService() {
         job = scope.launch { runCatching { AutoUpdate.run(applicationContext) }; jobFinished(p, false) }
         return true
     }
-    // Stopped mid-pass (constraints lost, time limit): half-done downloads resume next pass, so ask to be retried
+    // Parou no meio do ciclo (restrições perdidas, tempo limite): downloads pela metade retomam no próximo ciclo, então pede para tentar de novo
     override fun onStopJob(p: JobParameters): Boolean { job?.cancel(); runCatching { Store.settings.save(); Store.data.save() }; return true }
 }
 

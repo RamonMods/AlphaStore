@@ -27,18 +27,18 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 
-/** Silent installs and uninstalls through Dhizuku, which shares a device owner with other apps. [DhizukuService] runs inside
- *  Dhizuku's process, so its PackageInstaller sessions are the device owner's and need no confirmation. */
+/** Instalações e desinstalações silenciosas via Dhizuku, que compartilha um device owner com outros apps. [DhizukuService] roda dentro
+ *  do processo do Dhizuku, então suas sessões do PackageInstaller são as do device owner e não precisam de confirmação. */
 object DhizukuBridge {
     const val URL = "https://github.com/iamr0s/Dhizuku/releases"
     @Volatile private var service: IBinder? = null
 
-    /** Dhizuku is installed and holds a device or profile owner. */
+    /** Dhizuku está instalado e detém um device owner ou profile owner. */
     fun available(ctx: Context) = Build.VERSION.SDK_INT >= 26 && runCatching { Dhizuku.init(ctx.applicationContext) }.getOrDefault(false)
     fun granted(ctx: Context) = available(ctx) && runCatching { Dhizuku.isPermissionGranted() }.getOrDefault(false)
 
     suspend fun request(ctx: Context): Boolean {
-        if (!available(ctx)) throw NativeError("Dhizuku is not installed or not activated as device owner.")
+        if (!available(ctx)) throw NativeError("O Dhizuku não está instalado ou não está ativado como device owner.")
         if (Dhizuku.isPermissionGranted()) return true
         return suspendCancellableCoroutine { c ->
             Dhizuku.requestPermission(object : DhizukuRequestPermissionListener() {
@@ -49,7 +49,7 @@ object DhizukuBridge {
 
     private suspend fun binder(ctx: Context): IBinder {
         service?.takeIf { it.pingBinder() }?.let { return it }
-        if (!granted(ctx)) throw NativeError("Dhizuku permission missing. Turn Dhizuku on again in Settings.")
+        if (!granted(ctx)) throw NativeError("Permissão do Dhizuku ausente. Ligue o Dhizuku de novo em Configurações.")
         return withTimeoutOrNull(10_000) {
             suspendCancellableCoroutine { c ->
                 val conn = object : ServiceConnection {
@@ -58,7 +58,7 @@ object DhizukuBridge {
                 }
                 Dhizuku.bindUserService(DhizukuUserServiceArgs(ComponentName(ctx, DhizukuService::class.java)), conn)
             }
-        } ?: throw NativeError("Dhizuku did not answer. Open Dhizuku once, then try again.")
+        } ?: throw NativeError("O Dhizuku não respondeu. Abra o Dhizuku uma vez, depois tente novamente.")
     }
 
     private suspend fun call(ctx: Context, code: Int, write: (Parcel) -> Unit) = withContext(Dispatchers.IO) {
@@ -89,8 +89,8 @@ object DhizukuBridge {
     suspend fun uninstall(ctx: Context, pkg: String) = call(ctx, DhizukuService.UNINSTALL) { it.writeString(pkg) }
 }
 
-/** Runs in Dhizuku's process with its device-owner context (Dhizuku builds it from this class name, see proguard-rules). Codes 1 and 2 are
- *  Dhizuku's own create and destroy calls; replies are a PackageInstaller status and its message. */
+/** Roda no processo do Dhizuku com seu contexto de device owner (Dhizuku o constrói a partir deste nome de classe, veja proguard-rules). Códigos 1 e 2 são
+ *  as próprias chamadas de create e destroy do Dhizuku; as respostas são um status do PackageInstaller e sua mensagem. */
 class DhizukuService(private val ctx: Context) : Binder() {
     companion object {
         const val DESCRIPTOR = "com.ramonmods.alphastore.DhizukuService"
@@ -130,9 +130,9 @@ class DhizukuService(private val ctx: Context) : Binder() {
         return true
     }
 
-    /** Hands [start] a result IntentSender and waits for PackageInstaller's answer on this binder thread. */
+    /** Entrega [start] um result IntentSender e espera a resposta do PackageInstaller nesta thread de binder. */
     private fun result(start: (android.content.IntentSender) -> Unit): Pair<Int, String?> {
-        val done = CountDownLatch(1); var out: Pair<Int, String?> = PackageInstaller.STATUS_FAILURE to "No answer from Android."
+        val done = CountDownLatch(1); var out: Pair<Int, String?> = PackageInstaller.STATUS_FAILURE to "Sem resposta do Android."
         val action = "$ACTION.${System.nanoTime()}"
         val r = object : BroadcastReceiver() {
             override fun onReceive(c: Context, i: Intent) {

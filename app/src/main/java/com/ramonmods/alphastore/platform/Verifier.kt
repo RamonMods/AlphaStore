@@ -4,17 +4,17 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 
-/** Android's developer-verification component (`com.google.android.verifier`), pushed to every device, which can slow or block
- *  sideloaded installs. Detection is read-only; turning it off runs the commands Google documents (reversible) through whatever
- *  privileged route the user set up. Disabling for the current user is the recommended lever; uninstall-for-user is the fallback
- *  OEMs that block the disable still allow. The globals turn off Play Protect's verify hooks without removing anything. */
+/** Componente de verificação de desenvolvedor do Android (`com.google.android.verifier`), enviado a todo dispositivo, que pode retardar ou bloquear
+ *  instalações via sideload. A detecção é somente leitura; desligar roda os comandos que o Google documenta (reversíveis) através de qualquer
+ *  rota privilegiada que o usuário configurou. Desabilitar para o usuário atual é a alavanca recomendada; desinstalar-para-usuário é o fallback
+ *  que OEMs que bloqueiam o disable ainda permitem. Os globals desligam os hooks de verificação do Play Protect sem remover nada. */
 object Verifier {
     const val PKG = "com.google.android.verifier"
     const val OVERLAY = "com.google.android.verifier.overlay"
 
     enum class State { ACTIVE, OFF, ABSENT }
 
-    /** Where the verifier package lives. NONE means this phone does not have it. DATA is a Play-installed copy. SYSTEM is baked into the ROM, so it is frozen, not removed. */
+    /** Onde o pacote do verificador mora. NONE significa que este telefone não tem. DATA é uma cópia instalada via Play. SYSTEM é gravado na ROM, então está congelado, não removido. */
     enum class Home { NONE, DATA, SYSTEM }
 
     fun home(dumpsys: String): Home {
@@ -24,10 +24,10 @@ object Verifier {
         return if (path.startsWith("/data/")) Home.DATA else Home.SYSTEM
     }
 
-    /** App ops that stop the verifier waking or starting at boot, even if another app flips it back on. Scoped to this package only. */
+    /** App ops que impedem o verificador de acordar ou iniciar na inicialização, mesmo que outro app o reative. Escopo apenas para este pacote. */
     val QUIET = listOf("RUN_IN_BACKGROUND", "RUN_ANY_IN_BACKGROUND", "BOOT_COMPLETED").map { "cmd appops set $PKG $it ignore" }
 
-    /** Commands for one pass, in order. A missing package skips straight to the three verifier settings. Nothing here names another package, and every pm change stays on this user so Revert can undo it. */
+    /** Comandos para um ciclo, em ordem. Um pacote ausente pula direto para as três configurações do verificador. Nada aqui nomeia outro pacote, e toda mudança pm fica no usuário atual para o Revert desfazê-la. */
     fun secureSteps(pkgDump: String, overlayDump: String): List<String> {
         val steps = ArrayList<String>()
         when (home(pkgDump)) {
@@ -40,14 +40,14 @@ object Verifier {
         return steps
     }
 
-    /** Global verify hooks and the value that switches each off. Their old values are saved first so Revert puts them back. */
+    /** Hooks globais de verificação e o valor que liga cada um. Seus valores antigos são salvos primeiro para o Revert restaurá-los. */
     val GLOBALS = listOf("package_verifier_user_consent" to "-1", "package_verifier_enable" to "0", "verifier_verify_adb_installs" to "0")
     const val DISABLE_CMD = "pm disable-user --user 0 $PKG"
-    /** Fallback when an OEM blocks disable-user (component stays enabled afterwards). Keeps the APK, so Revert can bring it back. */
+    /** Fallback quando um OEM bloqueia disable-user (o componente fica habilitado depois). Mantém o APK, então o Revert pode trazê-lo de volta. */
     const val UNINSTALL_CMD = "pm uninstall -k --user 0 $PKG"
     val RESTORE_CMDS = listOf("cmd package install-existing --user 0 $PKG", "pm enable --user 0 $PKG")
 
-    /** ACTIVE while the component is installed and enabled for this user, OFF once disabled or removed for this user, ABSENT on phones that never got it. */
+    /** ACTIVE enquanto o componente está instalado e habilitado para este usuário, OFF após desabilitado ou removido para este usuário, ABSENT em telefones que nunca o receberam. */
     fun state(ctx: Context): State = runCatching {
         val pm = ctx.packageManager
         val info = pm.getApplicationInfo(PKG, PackageManager.MATCH_UNINSTALLED_PACKAGES or PackageManager.MATCH_DISABLED_COMPONENTS)

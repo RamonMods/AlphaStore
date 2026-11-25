@@ -45,8 +45,8 @@ import java.util.concurrent.atomic.AtomicLong
 enum class DlStatus { RUNNING, SUCCESSFUL, FAILED }
 data class Dl(val fileName: String, val progress: Int = 0, val status: DlStatus = DlStatus.RUNNING)
 
-/** Download engine ported from AppTrackerPlugin.DownloadTask: Range resume, 3 retries, html/4xx fail fast, .tmp then rename.
- *  Big files from servers that take ranges come down over [PARTS] connections at once: CDNs like GitHub's cap speed per connection. */
+/** Motor de download portado de AppTrackerPlugin.DownloadTask: retomada por Range, 3 tentativas, falha rápida em html/4xx, .tmp depois rename.
+ *  Arquivos grandes de servidores que aceitam ranges descem em [PARTS] conexões de uma vez: CDNs como o do GitHub limitam a velocidade por conexão. */
 object Downloads {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val jobs = ConcurrentHashMap<String, Job>()
@@ -276,8 +276,8 @@ class DownloadService : Service() {
     private fun note(count: Int, avg: Int): Notification {
         val launch = packageManager.getLaunchIntentForPackage(packageName)?.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         return NotificationCompat.Builder(this, CHANNEL).setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle(if (count > 1) "$count downloads in progress" else "Downloading…")
-            .setContentText(if (avg in 1..99) "$avg% · AlphaStore will keep going in the background" else "AlphaStore will keep going in the background")
+            .setContentTitle(if (count > 1) "$count downloads em andamento" else "Baixando…")
+            .setContentText(if (avg in 1..99) "$avg% · O AlphaStore continuará em segundo plano" else "O AlphaStore continuará em segundo plano")
             .setOnlyAlertOnce(true).setOngoing(true).setSilent(true).setCategory(NotificationCompat.CATEGORY_PROGRESS).setPriority(NotificationCompat.PRIORITY_LOW)
             .setProgress(100, avg.coerceIn(0, 100), avg <= 0)
             .apply { launch?.let { setContentIntent(PendingIntent.getActivity(this@DownloadService, 0, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)) } }

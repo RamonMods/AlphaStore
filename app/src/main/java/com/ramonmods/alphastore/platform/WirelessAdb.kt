@@ -50,9 +50,9 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.util.Date
 import java.util.concurrent.TimeUnit
 
-/** Built-in wireless ADB client talking to this device's own adbd. Installs run as the shell user, the same route as
- *  `adb install`, which Android exempts from the unverified-developer 24-hour wait. Pair once; afterwards AlphaStore
- *  reconnects by itself and, holding WRITE_SECURE_SETTINGS (self-granted over ADB), turns Wireless debugging back on after reboots. */
+/** Cliente ADB sem fio embutido que fala com o adbd deste dispositivo. As instalações rodam como usuário shell, o mesmo caminho do
+ *  `adb install`, que o Android isenta da espera de 24 horas de desenvolvedor não verificado. Emparehe uma vez; depois o AlphaStore
+ *  se reconecta sozinho e, mantendo WRITE_SECURE_SETTINGS (auto-concedido via ADB), reativa a Depuração sem fio após reinicializações. */
 object WirelessAdb {
     enum class Phase { IDLE, WAITING, PAIRING, READY, FAILED }
     data class Status(val phase: Phase = Phase.IDLE, val msg: String = "")
@@ -71,7 +71,7 @@ object WirelessAdb {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lock = Mutex()
 
-    /** RSA identity adbd remembers after pairing. Lives in no-backup storage so a restore onto another phone does not carry it. */
+    /** Identidade RSA que o adbd lembra após o emparelhamento. Fica em armazenamento sem backup para que uma restauração em outro telefone não leve junto. */
     private class Manager(ctx: Context) : AbsAdbConnectionManager() {
         private val pk: PrivateKey
         private val crt: Certificate
@@ -113,7 +113,7 @@ object WirelessAdb {
     private fun canToggle(ctx: Context) = ctx.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
 
     private fun aboutPhoneIntent(): Intent = Intent(Settings.ACTION_DEVICE_INFO_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    /** Developer options, scrolled to the Wireless debugging row where the platform supports the highlight extra. */
+    /** Opções do desenvolvedor, rolada até a linha Depuração sem fio onde a plataforma suporta o extra de destaque. */
     private fun wirelessDebuggingIntent(): Intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
         .putExtra(":settings:fragment_args_key", "toggle_adb_wireless").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
@@ -126,37 +126,37 @@ object WirelessAdb {
 
     private fun tryConnect(mg: Manager, port: Int) = runCatching { mg.connect(HOST, port) }.getOrDefault(false) || mg.isConnected
 
-    /** Connects to adbd: the last known port first (instant), then mDNS, switching Wireless debugging on when AlphaStore is allowed to. */
+    /** Conecta ao adbd: primeiro à última porta conhecida (instantâneo), depois mDNS, ligando a Depuração sem fio quando o AlphaStore tem permissão para. */
     suspend fun connect(ctx: Context): Unit = lock.withLock {
         withContext(Dispatchers.IO) {
             val mg = mgr(ctx)
             if (mg.isConnected) return@withContext
             val last = prefs(ctx).getInt("port", 0)
             if (last <= 0 || !tryConnect(mg, last)) {
-                if (!onWifi(ctx)) throw NativeError("Connect to Wi-Fi to install without the wait.")
+                if (!onWifi(ctx)) throw NativeError("Conecte-se ao Wi-Fi para instalar sem a espera.")
                 val cr = ctx.contentResolver; val toggle = canToggle(ctx)
-                // Like Shizuku: with WRITE_SECURE_SETTINGS, AlphaStore brings back Developer options and Wireless debugging itself, and turns off
-                // the 7-day authorization timeout that would otherwise make Android forget the pairing
+                // Como o Shizuku: com WRITE_SECURE_SETTINGS, o AlphaStore devolve as Opções do desenvolvedor e a Depuração sem fio sozinhos, e desliga
+                // o tempo limite de autorização de 7 dias que deixaria o Android esquecer o emparelhamento
                 if (toggle) runCatching {
                     if (!devOptions(ctx)) Settings.Global.putInt(cr, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 1)
                     Settings.Global.putLong(cr, "adb_allowed_connection_time", 0)
                     if (!wirelessOn(ctx)) Settings.Global.putInt(cr, ADB_WIFI, 1)
                 }
                 var port = discover(ctx, AdbMdns.SERVICE_TYPE_TLS_CONNECT, 15_000)
-                // On but silent (Wi-Fi changed, adbd stuck): restart Wireless debugging once
+                // Ligado mas silencioso (Wi-Fi mudou, adbd travado): reinicia a Depuração sem fio uma vez
                 if (port == null && toggle) {
                     runCatching { Settings.Global.putInt(cr, ADB_WIFI, 0); delay(1500); Settings.Global.putInt(cr, ADB_WIFI, 1) }
                     port = discover(ctx, AdbMdns.SERVICE_TYPE_TLS_CONNECT, 15_000)
                 }
-                val found = port ?: throw NativeError(if (toggle) "Wireless debugging didn't start on this Wi-Fi. Open Wireless debugging once and allow this network." else "Wireless debugging is off. Turn it on or run the setup again.")
-                if (!tryConnect(mg, found)) throw NativeError("Wireless debugging refused AlphaStore. Run the setup again to re-pair.")
+                val found = port ?: throw NativeError(if (toggle) "A depuração sem fio não começou neste Wi-Fi. Abra a depuração sem fio uma vez e permita esta rede." else "A depuração sem fio está desligada. Ative-a ou rode a configuração novamente.")
+                if (!tryConnect(mg, found)) throw NativeError("A depuração sem fio recusou o AlphaStore. Rode a configuração novamente para reemparelhar.")
                 prefs(ctx).edit { putInt("port", found) }
             }
             if (!canToggle(ctx)) runCatching { exec(mg, "pm grant ${ctx.packageName} ${Manifest.permission.WRITE_SECURE_SETTINGS}") }
         }
     }
 
-    /** Fire-and-forget connect, started when a download begins so the install itself does not wait on discovery. */
+    /** Conecta sem esperar, iniciado quando um download começa para a própria instalação não esperar pela descoberta. */
     fun warm(ctx: Context) { if (!connected) scope.launch { runCatching { connect(ctx.applicationContext) } } }
 
     private fun exec(mg: Manager, cmd: String, input: File? = null): String = mg.openStream("exec:$cmd").use { s ->
@@ -165,7 +165,7 @@ object WirelessAdb {
         s.openInputStream().bufferedReader().readText()
     }
 
-    /** [opts]: Beyond install picks; the shell user may pass every pm install switch, same as root and Shizuku. */
+    /** [opts]: além das escolhas de instalação; o usuário shell pode passar todos os switches de instalação do pm, igual ao root e Shizuku. */
     suspend fun install(ctx: Context, f: File, opts: Collection<String>? = null) = withContext(Dispatchers.IO) {
         val parts = Bundles.parts(ctx, f)
         if (parts.size > 1) { installMany(ctx, parts, opts); return@withContext }
@@ -174,7 +174,7 @@ object WirelessAdb {
         val pi = runCatching { ctx.packageManager.getPackageArchiveInfo(one.absolutePath, 0) }.getOrNull()
         val t0 = System.currentTimeMillis()
         connect(ctx)
-        // adbd sometimes leaves the stream open after pm prints Success, so the reply never ends. The package itself says when it landed.
+        // O adbd às vezes deixa o stream aberto depois que o pm imprime Success, então a resposta nunca termina. O pacote diz quando chegou.
         val reply = CompletableDeferred<Result<String>>()
         scope.launch {
             reply.complete(runCatching {
@@ -192,10 +192,10 @@ object WirelessAdb {
         val out = withTimeoutOrNull(5 * 60_000L) {
             while (!reply.isCompleted) {
                 delay(700)
-                if (landed()) { reply.complete(Result.success("Success")); runCatching { mgr(ctx).disconnect() } } // frees the hung stream; the next call reconnects on the saved port
+                if (landed()) { reply.complete(Result.success("Success")); runCatching { mgr(ctx).disconnect() } } // libera o stream travado; a próxima chamada reconecta na porta salva
             }
             reply.await().getOrThrow()
-        } ?: if (landed()) "Success" else throw NativeError("Wireless debugging stopped answering. Try again.")
+        } ?: if (landed()) "Success" else throw NativeError("A depuração sem fio parou de responder. Tente novamente.")
         if ("Success" !in out) throw NativeError(out.trim().ifEmpty { "INSTALL_FAILED" })
     }
 
@@ -217,7 +217,7 @@ object WirelessAdb {
         }
     }
 
-    /** Runs one shell command over ADB as the shell user, reconnecting once on a stale socket. A reply adbd never closes is cut off after [ms]. */
+    /** Roda um comando shell sobre ADB como usuário shell, reconectando uma vez num socket obsoleto. Uma resposta que o adbd nunca fecha é cortada após [ms]. */
     suspend fun shell(ctx: Context, cmd: String, ms: Long = 20_000): String = withContext(Dispatchers.IO) {
         connect(ctx)
         val reply = scope.async {
@@ -228,12 +228,12 @@ object WirelessAdb {
             }
         }
         withTimeoutOrNull(ms) { reply.await() }?.getOrThrow()
-            ?: run { runCatching { mgr(ctx).disconnect() }; throw NativeError("Wireless debugging stopped answering. Try again.") }
+            ?: run { runCatching { mgr(ctx).disconnect() }; throw NativeError("A depuração sem fio parou de responder. Tente novamente.") }
     }
 
-    // ---------------- Guided setup ----------------
-    // Runs from the notification shade: Settings drops its pairing dialog once it leaves the screen, and AlphaStore cannot open
-    // pages from the background, so each step is a tappable notification that advances by itself as the switches flip.
+    // ---------------- Configuração guiada ----------------
+    // Roda da aba de notificações: as Configurações desligam o diálogo de emparelhamento ao sair da tela, e o AlphaStore não pode
+    // abrir páginas em segundo plano, então cada passo é uma notificação tocável que avança sozinho quando as chaves mudam.
 
     private data class Step(val open: Intent, val title: String, val text: String, val code: Boolean)
     private var observer: ContentObserver? = null
@@ -252,12 +252,12 @@ object WirelessAdb {
     private fun advance(ctx: Context, open: Boolean) {
         if (_status.value.phase == Phase.PAIRING || _status.value.phase == Phase.READY) return
         val step = when {
-            !devOptions(ctx) -> Step(aboutPhoneIntent(), "Step 1 of 3 · Unlock Developer options",
-                "Tap Build number 7 times (on some phones it sits under Software information). AlphaStore moves on by itself.", false)
-            !wirelessOn(ctx) -> Step(wirelessDebuggingIntent(), "Step 2 of 3 · Turn on Wireless debugging",
-                "Tap here, open Wireless debugging, switch it on and tap Allow.", false)
-            else -> Step(wirelessDebuggingIntent(), "Step 3 of 3 · Pair AlphaStore",
-                "In Wireless debugging tap Pair device with pairing code, then type the 6-digit code here.", true)
+            !devOptions(ctx) -> Step(aboutPhoneIntent(), "Passo 1 de 3 · Desbloqueie as Opções do desenvolvedor",
+                "Toque no Número da versão 7 vezes (em alguns telefones fica em Informações do software). O AlphaStore avança sozinho.", false)
+            !wirelessOn(ctx) -> Step(wirelessDebuggingIntent(), "Passo 2 de 3 · Ative a depuração sem fio",
+                "Toque aqui, abra a depuração sem fio, ative-a e toque em Permitir.", false)
+            else -> Step(wirelessDebuggingIntent(), "Passo 3 de 3 · Empareie o AlphaStore",
+                "Em Depuração sem fio toque em Emparelhar dispositivo com código de emparelhamento, depois digite o código de 6 dígitos aqui.", true)
         }
         _status.value = Status(Phase.WAITING, step.title)
         notify(ctx, step.title, step.text, code = step.code, open = step.open)
@@ -265,20 +265,20 @@ object WirelessAdb {
     }
 
     suspend fun pair(ctx: Context, code: String) = withContext(Dispatchers.IO) {
-        _status.value = Status(Phase.PAIRING, "Pairing...")
-        notify(ctx, "Pairing...", "Keep the pairing code dialog open.", quiet = true)
+        _status.value = Status(Phase.PAIRING, "Emparehando...")
+        notify(ctx, "Emparehando...", "Mantenha o diálogo do código de emparelhamento aberto.", quiet = true)
         try {
             val port = discover(ctx, AdbMdns.SERVICE_TYPE_TLS_PAIRING, 10_000)
-                ?: throw NativeError("Pairing dialog not found. Open it again and use the new code.")
-            try { mgr(ctx).pair(HOST, port, code) } catch (_: Exception) { throw NativeError("Wrong or expired code. Try again with a new one.") }
+                ?: throw NativeError("Diálogo de emparelhamento não encontrado. Abra novamente e use o novo código.")
+            try { mgr(ctx).pair(HOST, port, code) } catch (_: Exception) { throw NativeError("Código inválido ou expirado. Tente novamente com um novo.") }
             connect(ctx)
             stopSetup(ctx)
-            _status.value = Status(Phase.READY, "Paired. Installs now skip the wait.")
-            notify(ctx, "AlphaStore is paired", "Apps now install instantly, no 24-hour wait.", done = true)
+            _status.value = Status(Phase.READY, "Emparelhado. As instalações agora pulam a espera.")
+            notify(ctx, "AlphaStore emparejado", "Apps agora instalam instantaneamente, sem a espera de 24 horas.", done = true)
         } catch (e: Exception) {
-            val msg = (e as? NativeError)?.message ?: "Pairing failed. Try again."
+            val msg = (e as? NativeError)?.message ?: "Falha no emparelhamento. Tente novamente."
             _status.value = Status(Phase.FAILED, msg)
-            notify(ctx, "Pairing failed", msg, code = true, open = wirelessDebuggingIntent())
+            notify(ctx, "Falha no emparelhamento", msg, code = true, open = wirelessDebuggingIntent())
         }
     }
 
@@ -287,7 +287,7 @@ object WirelessAdb {
     @SuppressLint("MissingPermission")
     private fun notify(ctx: Context, title: String, text: String, code: Boolean = false, done: Boolean = false, open: Intent? = null, quiet: Boolean = false) {
         val nm = NotificationManagerCompat.from(ctx)
-        nm.createNotificationChannel(NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_HIGH).setName("Wireless install setup").build())
+        nm.createNotificationChannel(NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_HIGH).setName("Configuração de instalação sem fio").build())
         if (!nm.areNotificationsEnabled()) return
         val n = NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle(title).setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text))
@@ -295,8 +295,8 @@ object WirelessAdb {
         open?.let { n.setContentIntent(PendingIntent.getActivity(ctx, 1, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)) }
         if (code) {
             val pi = PendingIntent.getBroadcast(ctx, 0, Intent(ctx, AdbPairReceiver::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
-            n.addAction(NotificationCompat.Action.Builder(0, "Enter code", pi)
-                .addRemoteInput(RemoteInput.Builder(KEY_CODE).setLabel("6-digit pairing code").build()).build())
+            n.addAction(NotificationCompat.Action.Builder(0, "Inserir código", pi)
+                .addRemoteInput(RemoteInput.Builder(KEY_CODE).setLabel("Código de emparelhamento de 6 dígitos").build()).build())
         }
         nm.notify(NOTIF, n.build())
     }

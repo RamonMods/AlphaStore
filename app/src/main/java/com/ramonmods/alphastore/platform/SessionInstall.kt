@@ -14,7 +14,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
-/** One PackageInstaller session for a single APK or a split set (XAPK, APKM, APKS). */
+/** Uma sessão do PackageInstaller para um APK único ou um conjunto dividido (XAPK, APKM, APKS). */
 object SessionInstall {
     private val sessions = ConcurrentHashMap<Int, CompletableDeferred<Pair<Int, String?>>>()
     private val confirm = ConcurrentHashMap.newKeySet<Int>()
@@ -37,13 +37,13 @@ object SessionInstall {
                 session.commit(PendingIntent.getBroadcast(ctx, id, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE).intentSender)
             }
             withTimeoutOrNull(if (ask) 5 * 60_000L else 3 * 60_000L) { done.await() }
-                ?: (PackageInstaller.STATUS_FAILURE to "Android did not answer in time. AlphaStore retries on its next pass.")
+                ?: (PackageInstaller.STATUS_FAILURE to "O Android não respondeu a tempo. O AutoUpdate tenta de novo no próximo ciclo.")
         } catch (e: Exception) {
             runCatching { pi.abandonSession(id) }; PackageInstaller.STATUS_FAILURE to e.message
         } finally { sessions -= id; confirm -= id }
     }
 
-    /** Session results. A background install drops the confirm dialog. An install the user just started shows it. True when this session is ours. */
+    /** Resultados da sessão. Uma instalação em segundo plano descarta o diálogo de confirmação. Uma instalação que o usuário acabou de iniciar mostra. Verdadeiro quando esta sessão é nossa. */
     fun onResult(ctx: Context, i: Intent): Boolean {
         val id = i.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1)
         if (sessions[id] == null && id !in confirm) return false
@@ -53,7 +53,7 @@ object SessionInstall {
             val next = if (Build.VERSION.SDK_INT >= 33) i.getParcelableExtra("android.content.pm.extra.INTENT", Intent::class.java) else i.getParcelableExtra("android.content.pm.extra.INTENT")
             if (next != null) {
                 next.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                runCatching { ctx.startActivity(next) }.onFailure { sessions[id]?.complete(status to "Android asked to confirm the install.") }
+                runCatching { ctx.startActivity(next) }.onFailure { sessions[id]?.complete(status to "O Android pediu para confirmar a instalação.") }
                 return true
             }
         }
