@@ -39,7 +39,7 @@
 
 **AlphaStore** é um cliente de loja de apps para Android, focado em transparência. O app usa catálogo público em JSON, resolve releases do GitHub, GitLab e Codeberg e mantém o caminho de entrega compreensível — dá para ver de onde as coisas vêm e como as atualizações são descobertas.
 
-Este repositório é o aplicativo cliente. O catálogo, configurações, avisos e metadados usados pelo app são mantidos separadamente em [RamonMods/AlphaStore](https://github.com/RamonMods/AlphaStore), mantendo a UI e os dados da loja separados.
+Este repositório reúne o cliente e os dados do catálogo no mesmo lugar: `config.json`/`apps.json` ficam na branch `main`, e `mirror.json`/`stars.json`/sentinel ficam na branch `data`.
 
 > AlphaStore é para quem se importa de onde o software vem, não só com a velocidade do download.
 
@@ -74,6 +74,10 @@ A AlphaStore não tem rastreadores de vigilância. Alguns scanners podem sinaliz
 | Instalação privilegiada | Shizuku, Dhizuku, root, ADB sem fio |
 | Anúncios opcionais | Unity Ads (recompensado, só quando o usuário inicia) |
 
+## Download
+
+Baixe o APK mais recente na página de [Releases](https://github.com/RamonMods/AlphaStore/releases).
+
 ## Construir o projeto
 
 ```bash
@@ -99,10 +103,17 @@ No Windows:
 - `assets/` — imagens e artes do README/site
 - `AlphaStore Legacy/` — legado web anterior (referência histórica)
 - `.github/workflows/` — CI/CD e automações
+- `config.json`, `apps.json` — catálogo/configuração (branch `main`)
+- Branch `data` — mirrors, stars, leaderboard e sentinel
 
 ## Dados e catálogo
 
-O cliente consome dados do repositório [RamonMods/AlphaStore](https://github.com/RamonMods/AlphaStore). Para mudar catálogo/fontes/mirrors, atualize a configuração de dados e os endpoints correspondentes.
+O catálogo fica no próprio repositório [RamonMods/AlphaStore](https://github.com/RamonMods/AlphaStore):
+
+- **Branch `main`**: `config.json`, `apps.json`, `mirror_config.json`, `release_notes.json`
+- **Branch `data`**: `mirror.json`, `stars.json`, `leaderboard.json`, `sentinel/`, `mirrors/`, `updates.bin`
+
+Para mudar catálogo/fontes/mirrors, atualize os arquivos correspondentes e os endpoints em `app/src/main/java/com/ramonmods/alphastore/data/Models.kt` quando necessário.
 
 ## Contribuir
 
