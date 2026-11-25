@@ -193,7 +193,7 @@ fun AiScreen(vm: MainViewModel, onClose: () -> Unit) {
     val last = ai.messages.lastOrNull()?.text
     LaunchedEffect(ai.messages.size, last) { if (ai.messages.isNotEmpty()) list.animateScrollToItem(ai.messages.lastIndex) }
     fun send(t: String) { if (ready) { ai.send(vm, t); input = "" } else settings = true }
-    val label = when { p == AiProvider.LOCAL -> LocalLlm.model(s.aiLocalModel)?.name ?: "No dispositivo"; else -> "${p.label} · ${s.aiModels[p.id].orEmpty().ifBlank { p.model }}" }
+    val label = when { p == AiProvider.LOCAL -> LocalLlm.model(s.aiLocalModel)?.name ?: "No celular"; else -> "${p.label} · ${s.aiModels[p.id].orEmpty().ifBlank { p.model }}" }
     Column(Modifier.fillMaxSize().background(cs.surface).windowInsetsPadding(AiTop).windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars).only(WindowInsetsSides.Bottom))) {
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             AiOrb(40.dp, ai.busy); Spacer(Modifier.width(12.dp))
@@ -446,7 +446,7 @@ private fun ProviderPicker(p: AiProvider, onPick: (AiProvider) -> Unit) {
     var lastCloud by rememberSaveable { mutableStateOf(if (local) AiProvider.GEMINI.id else p.id) }
     var open by remember { mutableStateOf(false) }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(false to (Sym.Cloud to "Nuvem"), true to (Sym.PhoneAndroid to "No dispositivo")).forEach { (dev, look) ->
+        listOf(false to (Sym.Cloud to "Nuvem"), true to (Sym.PhoneAndroid to "No celular")).forEach { (dev, look) ->
             val on = local == dev
             ToggleButton(on, { if (dev) onPick(AiProvider.LOCAL) else onPick(AlphaStoreAi.provider(lastCloud)) }, Modifier.weight(1f).heightIn(min = 52.dp),
                 shapes = ToggleButtonDefaults.shapesFor(52.dp)) {

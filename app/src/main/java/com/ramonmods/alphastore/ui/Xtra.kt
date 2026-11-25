@@ -237,7 +237,7 @@ fun GuardianSheet(vm: MainViewModel, onDismiss: () -> Unit) = AlphaStoreSheet(on
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 MorphBlob(modes.map { it.shape }, mi, 48.dp, cs.primaryContainer) { Icon(mode.icon, null, Modifier.size(24.dp), tint = cs.onPrimaryContainer) }
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                    Text("Guardian", style = ty.headlineSmallEmphasized)
+                    Text("Guardião", style = ty.headlineSmallEmphasized)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(6.dp).clip(CircleShape).background(if (shizuku) Safe else cs.error)); Spacer(Modifier.width(6.dp))
                         Text(if (tracker.root) "Root" else if (shizuku) "Shizuku ativado" else "Shizuku desativado", style = ty.labelMedium, color = cs.onSurfaceVariant)
@@ -588,7 +588,7 @@ fun SentinelSheet(vm: MainViewModel, onDismiss: () -> Unit) = AlphaStoreSheet(on
 
     val c = MaterialTheme.colorScheme
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.weight(1f)) { SheetTitle("Sentinel", Sym.GppGood, "Inteligência de ameaças") }
+        Box(Modifier.weight(1f)) { SheetTitle("Sentinela", Sym.GppGood, "Inteligência de ameaças") }
         Tag(if (perm.storage) "Sensores online" else "Sensores bloqueados", if (perm.storage) Safe else Red, if (perm.storage) Sym.VerifiedUser else Sym.Lock)
         Spacer(Modifier.width(20.dp))
     }
@@ -600,7 +600,7 @@ fun SentinelSheet(vm: MainViewModel, onDismiss: () -> Unit) = AlphaStoreSheet(on
                 "permissions" -> {
                     hero(Sym.Lock, Caution, MaterialShapes.Cookie9Sided)
                     Text("Acesso necessário", style = MaterialTheme.typography.headlineSmallEmphasized)
-                    Text("O Sentinel precisa de permissão para verificar o armazenamento do seu dispositivo em busca de ameaças.", textAlign = TextAlign.Center, color = c.onSurfaceVariant)
+                    Text("A Sentinela precisa de permissão para verificar o armazenamento do seu dispositivo em busca de ameaças.", textAlign = TextAlign.Center, color = c.onSurfaceVariant)
                     Button({
                         tracker.universalStorageIntent()?.let { runCatching { ctx.startActivity(it) } }
                             ?: legacy.launch(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE))
@@ -610,7 +610,7 @@ fun SentinelSheet(vm: MainViewModel, onDismiss: () -> Unit) = AlphaStoreSheet(on
                 "database" -> {
                     LoadingIndicator(Modifier.size(112.dp))
                     Text("Sincronizando inteligência de ameaças", style = MaterialTheme.typography.headlineSmallEmphasized)
-                    Text(if (dbStatus == "updating") "Baixando as assinaturas de ameaças mais recentes..." else "Conectando à rede do Sentinel...", color = c.onSurfaceVariant)
+                    Text(if (dbStatus == "updating") "Baixando as assinaturas de ameaças mais recentes..." else "Conectando à rede da Sentinela...", color = c.onSurfaceVariant)
                     LinearWavyProgressIndicator({ dbProgress / 100f }, Modifier.fillMaxWidth())
                     if (dbStatus == "updating") Text("${dbProgress.toInt()}%", style = MaterialTheme.typography.labelLarge)
                 }
