@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">AlphaStore</string>
+    <string name="welcome">AlphaStoreへようこそ</string>
+    <string name="settings">設定</string>
+    <string name="search">検索</string>
+    <string name="updates">アップデート</string>
+    <string name="my_apps">マイアプリ</string>
+    <string name="home">ホーム</string>
+</resources>

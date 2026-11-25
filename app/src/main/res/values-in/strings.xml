@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">AlphaStore</string>
+    <string name="welcome">Selamat datang di AlphaStore</string>
+    <string name="settings">Pengaturan</string>
+    <string name="search">Cari</string>
+    <string name="updates">Pembaruan</string>
+    <string name="my_apps">Aplikasi saya</string>
+    <string name="home">Beranda</string>
+</resources>

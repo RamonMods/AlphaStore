@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">AlphaStore</string>
+    <string name="welcome">Benvenuto su AlphaStore</string>
+    <string name="settings">Impostazioni</string>
+    <string name="search">Cerca</string>
+    <string name="updates">Aggiornamenti</string>
+    <string name="my_apps">Le mie app</string>
+    <string name="home">Home</string>
+</resources>

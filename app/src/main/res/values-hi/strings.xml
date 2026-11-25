@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">AlphaStore</string>
+    <string name="welcome">AlphaStore में आपका स्वागत है</string>
+    <string name="settings">सेटिंग्स</string>
+    <string name="search">खोजें</string>
+    <string name="updates">अपडेट</string>
+    <string name="my_apps">मेरे ऐप्स</string>
+    <string name="home">होम</string>
+</resources>

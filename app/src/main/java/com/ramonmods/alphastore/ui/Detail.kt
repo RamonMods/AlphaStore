@@ -1,0 +1,690 @@
+package com.ramonmods.alphastore.ui
+
+import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.core.net.toUri
+import coil3.compose.AsyncImage
+import com.ramonmods.alphastore.data.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+private val MICROG_PKGS = listOf("app.revanced.android.gms", "com.mgoogle.android.gms")
+
+@Composable
+private fun streamColor(t: String) = when (t) {
+    "Stable" -> Safe; "Beta" -> MaterialTheme.colorScheme.primary
+    "Alpha" -> Color(0xFFF97316); "Nightly" -> Color(0xFFA855F7); else -> MaterialTheme.colorScheme.onSurfaceVariant
+}
+
+@Composable
+private fun StreamBadge(t: String) = Tag(when (t) { "Stable" -> "ESTÁVEL"; "Alpha" -> "ALFA"; else -> t.uppercase() }, streamColor(t))
+
+@Composable
+fun DetailScreen(vm: MainViewModel, base: AppItem) {
+    val s = LocalS.current; val d = LocalD.current; val scope = rememberCoroutineScope(); val cs = MaterialTheme.colorScheme
+    // Stable releases only: the version picker and Download see just the stable build. Apps with no stable release keep theirs.
+    val app = remember(base, s.resolvedPackageNames, s.stableOnly) { base.copy(packageName = s.resolvedPackageNames[base.id] ?: base.packageName,
+        availableVersions = if (s.stableOnly) base.availableVersions.filter { it.type == "Stable" }.ifEmpty { base.availableVersions } else base.availableVersions) }
+    val local = s.installedVersions[app.id]
+    val needsUpdate = hasAvailableUpdate(app, local, s.streamOf(app.id), s.installedBuilds[app.id])
+    val installed = !local.isNullOrEmpty(); val upToDate = installed && !needsUpdate
+    val activeId = d.activeDownloads[app.id]; val cleanup = d.pendingCleanup[app.id]?.fileName; val ready = d.readyToInstall[app.id]
+    val status = d.downloadStatus[app.id]; val progress = d.downloadProgress[app.id] ?: 0f
+    val installing = vm.installingId == app.id; val scanning = vm.scanningId == app.id
+    val android = app.installsHere()
+    val fallback = app.latestVersion == "Unknown" || app.version == "View on GitHub"
+    val hasTarget = (app.downloadUrl.isNotEmpty() && app.downloadUrl != "#") || app.variants.isNotEmpty() || app.availableVersions.isNotEmpty()
+    val unavailable = ready == null && cleanup == null && !installed && !hasTarget && app.latestVersion == "Latest" && app.size == "Varies"
+    val path = app.downloadUrl.lowercase().substringBefore('?').substringBefore('#')
+    val packaged = listOf(".apk", ".apks", ".xapk", ".apkm", ".zip", ".exe", ".dmg").any(path::endsWith)
+    val directHost = listOf("uptodown.com", "winudf.com", "apkpure.com", "apkmirror.com", "itch.io", "itch.zone").any { it in path }
+    // A known source already resolved a file. The link itself often does not end in .apk (APKMirror's download page is one of those).
+    val tracked = Orbit.owns(app.id) || app.repoUrl?.takeIf { it.isNotBlank() && it != "#" }?.let { Orbit.sourceOf(it) != OrbitSource.WEB } == true
+    val external = !tracked && !directHost && (path.startsWith("http://") || path.startsWith("https://")) && !packaged && "github.com" !in path
+    val domain = if (external) runCatching { app.downloadUrl.toUri().host!!.replace("www.", "") }.getOrDefault("Source") else "External Source"
+    val fav = app.id in d.favorites
+
+    var target by remember(app.id) { mutableStateOf<VersionOption?>(null) }
+    var versions by remember { mutableStateOf(false) }; var variants by remember { mutableStateOf(false) }
+    var microG by remember { mutableStateOf(false) }; var shareSheet by remember { mutableStateOf(false) }
+    var ignoreMenu by remember { mutableStateOf(false) }; var lightbox by remember { mutableStateOf<Int?>(null) }
+    var cleanupPrompt by remember(app.id) { mutableStateOf(cleanup != null) }; var handled by remember(app.id) { mutableStateOf(false) }
+    var cleaning by remember { mutableStateOf(false) }; var more by remember { mutableStateOf(false) }
+    LaunchedEffect(cleanup) { if (cleanup != null) { if (!handled) cleanupPrompt = true } else { cleanupPrompt = false; handled = false } }
+
+    fun microGThen(u: String?) {
+        if (app.id in Defaults.MICROG_DEPENDENT_APPS && ready == null && MICROG_PKGS.none { runCatching { vm.tracker.appInfo(it).installed }.getOrDefault(false) }) { microG = true; return }
+        vm.download(app, u)
+    }
+    fun proceed(v: VersionOption) {
+        if (v.variants.size > 1) { target = v; variants = true } else microGThen(v.variants.firstOrNull()?.url ?: app.downloadUrl)
+    }
+    fun action(u: String? = null) {
+        if (installing || activeId != null || scanning || unavailable) return
+        when {
+            u != null -> microGThen(u)
+            ready != null -> vm.download(app)
+            target == null && app.availableVersions.size > 1 -> versions = true
+            else -> {
+                val v = target ?: app.availableVersions.firstOrNull()
+                if (v != null) proceed(v) else if (app.variants.size > 1) variants = true else microGThen(app.downloadUrl)
+            }
+        }
+    }
+    fun launch() {
+        val p = app.packageName ?: return
+        vm.haptic(H.HEAVY); runCatching { vm.tracker.launch(p) }.onFailure { vm.error("Não foi possível abrir o app. Ele pode estar restrito.") }
+    }
+    fun ignore(type: String, v: String? = null) {
+        vm.set { it.ignoreUpdate(app.id, type, v, System.currentTimeMillis()) }; ignoreMenu = false; vm.selectedApp = null; vm.haptic(H.SUCCESS)
+    }
+    fun keep() { vm.haptic(H.SELECTION); handled = true; cleanupPrompt = false }
+    fun cleanupDelete() {
+        val f = cleanup ?: return
+        cleaning = true; handled = true
+        scope.launch {
+            if (vm.purgeApk(app.id, f)) vm.haptic(H.SUCCESS)
+            delay(450)
+            cleanupPrompt = false; cleaning = false
+        }
+    }
+    fun report() = vm.tracker.open("mailto:${vm.config?.supportEmail ?: Defaults.SUPPORT_EMAIL}?subject=${Uri.encode("Report Issue: ${app.name}")}")
+
+    val shown = target ?: app.availableVersions.firstOrNull { it.type == s.streamOf(app.id) } ?: app.availableVersions.firstOrNull()
+    // Morphe and other patched builds: their release notes describe the build bot, not the app
+    val notesTag = if (app.patches.isNotEmpty() || listOf(app.name, app.author, app.repoUrl, app.githubRepo, app.gitlabRepo).any { "morphe" in it.orEmpty().lowercase() }) "" else shown?.tag.orEmpty()
+    // Fetched as the page opens, not when the row scrolls in; null while loading, NOTES_FAILED when the call failed
+    val notes by produceState<String?>(null, app.id, notesTag) { value = if (notesTag.isEmpty()) null else fetchReleaseNotes(app, notesTag, s.githubToken) ?: NOTES_FAILED }
+    // Asked of the repo's host once per session: a fork shows where it came from
+    val fork by produceState<ForkInfo?>(null, app.id) { value = fetchForkOf(app, s.githubToken) }
+    // Anything that ends up as an APK on this phone can be read first: a downloaded file, the installed copy, or the direct link
+    val directApk = remember(app) { inspectUrl(app) }
+    val canInspect = android && (ready != null || installed || (!external && !fallback && !unavailable && directApk != null))
+    var inspecting by remember { mutableStateOf(false) }
+    val from = remember(app.id) { vm.openFrom }
+    // Keyed by app: the page stays composed between apps, and a shared state opened the next app at the last one's scroll position
+    val list = rememberSaveable(app.id, saver = LazyListState.Saver) { LazyListState() }; val media = rememberSaveable(app.id, saver = LazyListState.Saver) { LazyListState() }
+    val scrolled by remember(list, media) { derivedStateOf { list.firstVisibleItemIndex > 0 || media.firstVisibleItemIndex > 0 } }
+    // Medium and expanded windows: the actions float as a card; expanded ones split the page into an info pane and a media pane
+    val wc = LocalWidthClass.current
+    val wide = wc.wide; val twoPane = wc == WidthClass.EXPANDED
+    Scaffold(
+        containerColor = cs.surface,
+        topBar = {
+            TopAppBar(
+                title = { AnimatedVisibility(scrolled) { Text(app.name, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
+                actions = {
+                    IconToggleButton(fav, { vm.haptic(H.HEAVY); vm.upd { it.toggleFavorite(app.id) } }) {
+                        Icon(if (fav) Sym.Favorite else Sym.FavoriteBorder, "Favorito", tint = if (fav) cs.primary else LocalContentColor.current)
+                    }
+                    IconButton({ vm.haptic(H.SELECTION); vm.tracker.share(app.name, "Confira ${app.name} na AlphaStore!", if (Orbit.owns(app.id)) app.repoUrl.orEmpty() else Share.webLink(app.id)) }) { Icon(Sym.Share, "Compartilhar") }
+                    Box {
+                        IconButton({ more = true }) { Icon(Sym.MoreVert, "Mais opções") }
+                        DropdownMenu(more, { more = false }, shape = RoundedCornerShape(20.dp)) {
+                            // Orbit apps are the user's own, not the catalog's: no catalog corrections, and leaving Orbit is one tap
+                            if (Orbit.owns(app.id)) DropdownMenuItem({ Text("Remover do Orbit") }, { more = false; vm.orbitRemove(app.id); vm.selectedApp = null }, leadingIcon = { Icon(Sym.Orbit, null) })
+                            else {
+                                DropdownMenuItem({ Text("Solicitar alteração do app") }, { more = false; vm.haptic(H.LIGHT); vm.changeRequest = true }, leadingIcon = { Icon(Sym.EditNote, null) })
+                                DropdownMenuItem({ Text("Reportar um problema") }, { more = false; vm.haptic(H.LIGHT); report() }, leadingIcon = { Icon(Sym.Flag, null) })
+                            }
+                            if (installed && android) DropdownMenuItem({ Text("Desinstalar") }, { more = false; vm.uninstall(app) }, leadingIcon = { Icon(Sym.Delete, null) })
+                            if (installed) {
+                                val managed = isManaged(app.id, s)
+                                DropdownMenuItem({ Text(if (managed) "Não gerenciar com a AlphaStore" else "Gerenciar com a AlphaStore") }, {
+                                    more = false; vm.haptic(H.SUCCESS); vm.set { it.withManaged(app.id, !managed) }
+                                    vm.toast(if (managed) "${app.name} saiu de Meus apps e atualizações" else "${app.name} voltou para Meus apps", action = "Desfazer") { vm.set { it.withManaged(app.id, managed) } }
+                                }, leadingIcon = { Icon(if (managed) Sym.VisibilityOff else Sym.Visibility, null) })
+                                val skip = app.id in s.autoSkip
+                                DropdownMenuItem({ Text(if (skip) "Incluir na atualização automática" else "Ignorar na atualização automática") }, {
+                                    more = false; vm.haptic(H.SUCCESS); vm.set { it.copy(autoSkip = if (skip) it.autoSkip - app.id else it.autoSkip + app.id) }
+                                    vm.toast(if (skip) "${app.name} voltou para a atualização automática" else "${app.name} ficou fora da atualização automática")
+                                }, leadingIcon = { Icon(Sym.Autorenew, null) })
+                            }
+                            if (s.isDevUnlocked) DropdownMenuItem({ Text("Links profundos de desenvolvedor") }, { more = false; vm.haptic(H.SELECTION); shareSheet = true }, leadingIcon = { Icon(Sym.Link, null) })
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = if (scrolled) cs.surfaceContainer else Color.Transparent),
+                windowInsets = WindowInsets.statusBarsIgnoringVisibility, expandedHeight = 48.dp,
+            )
+        },
+        bottomBar = {
+            // Phones: a sheet-like bar along the bottom edge. Tablets, foldables and TVs: a floating card the size of its buttons,
+            // so no full-width slab of color runs from one side of the screen to the other.
+            Box(Modifier.fillMaxWidth().then(if (wide) Modifier.navigationBarsPadding().padding(16.dp) else Modifier), contentAlignment = Alignment.Center) {
+            Surface(if (wide) Modifier.widthIn(max = 560.dp) else Modifier.fillMaxWidth(), color = if (wide) cs.surfaceContainerHigh else cs.surfaceContainer,
+                shape = if (wide) RoundedCornerShape(36.dp) else RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp), shadowElevation = if (wide) 6.dp else 0.dp) {
+                Row(Modifier.fillMaxWidth().then(if (wide) Modifier.padding(10.dp) else Modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val h = Modifier.heightIn(min = ButtonDefaults.MediumContainerHeight)
+                    val side = Modifier.size(ButtonDefaults.MediumContainerHeight)
+                    val big = ButtonDefaults.textStyleFor(ButtonDefaults.MediumContainerHeight)
+                    @Composable fun Main(icon: ImageVector?, label: String, enabled: Boolean = true, busy: Boolean = false, onClick: () -> Unit) =
+                        Button(onClick, modifier = h.weight(1f), enabled = enabled, shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight)) {
+                            if (busy) LoadingIndicator(Modifier.size(28.dp), color = LocalContentColor.current) else icon?.let { Icon(it, null) }
+                            Spacer(Modifier.width(10.dp)); Text(label, style = big, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    @Composable fun Side(icon: ImageVector, label: String, enabled: Boolean = true, onClick: () -> Unit) =
+                        FilledTonalIconButton(onClick, modifier = side, enabled = enabled, shapes = IconButtonDefaults.shapes()) { Icon(icon, label) }
+                    when {
+                        scanning -> Main(null, "Verificando...", enabled = false, busy = true) {}
+                        activeId != null || status == "RUNNING" || status == "PENDING" -> {
+                            val p by animateFloatAsState(progress / 100f, MaterialTheme.motionScheme.defaultSpatialSpec(), label = "dl")
+                            Surface(h.weight(1f), shape = Pill, color = cs.primaryContainer, contentColor = cs.onPrimaryContainer) {
+                                Row(Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    if (progress <= 0f) LinearWavyProgressIndicator(Modifier.weight(1f)) else LinearWavyProgressIndicator({ p }, Modifier.weight(1f))
+                                    Spacer(Modifier.width(14.dp))
+                                    Text("${progress.toInt()}%", style = MaterialTheme.typography.titleMediumEmphasized)
+                                }
+                            }
+                            Side(Sym.Close, "Cancelar download") { vm.cancelDownload(app.id) }
+                        }
+                        ready != null -> {
+                            Main(Sym.InstallMobile, if (installing) "Instalando..." else "Instalar agora", enabled = !installing, busy = installing) { action() }
+                            Side(Sym.Delete, "Remover APK", enabled = !installing) { vm.haptic(H.MEDIUM); vm.deleteReadyFile(app, ready) }
+                        }
+                        cleanup != null && android -> {
+                            Main(Sym.OpenInNew, "Abrir", onClick = ::launch)
+                            Side(Sym.SaveAlt, "Exportar APK para Downloads") { vm.exportApk(app, cleanup) }
+                        }
+                        upToDate && android -> {
+                            Side(Sym.Delete, "Desinstalar") { vm.uninstall(app) }
+                            Main(Sym.OpenInNew, "Abrir", onClick = ::launch)
+                        }
+                        TRACK_ONLY_TAG in app.tags && ready == null -> Main(Sym.Visibility, "Apenas acompanhar") { app.repoUrl?.let { vm.tracker.open(it) } }
+                        else -> {
+                            val (icon, label) = when {
+                                unavailable -> Sym.Block to "Indisponível no momento"
+                                fallback -> Sym.Code to "Ver no GitHub"
+                                external -> Sym.OpenInNew to "Obter na origem"
+                                needsUpdate -> Sym.SystemUpdate to "v${local.orEmpty().removePrefix("v")} → v${preferredVersion(app, s.streamOf(app.id)).removePrefix("v")}"
+                                app.platform == Platform.PC -> Sym.DesktopWindows to "Obter no PC"
+                                else -> Sym.Download to "Baixar"
+                            }
+                            Main(icon, if (installing) "Instalando..." else label, enabled = !installing && !fallback && !unavailable, busy = installing) { action() }
+                            if (needsUpdate && !installing && !fallback && !unavailable && isUpdateIgnored(app, s, System.currentTimeMillis()))
+                                Side(Sym.Notifications, "Parar de ignorar esta atualização") { vm.set { it.copy(ignoredUpdates = it.ignoredUpdates - app.id) }; vm.haptic(H.SUCCESS); vm.toast("As atualizações de ${app.name} voltarão a aparecer") }
+                            else if (needsUpdate && !installing && !fallback && !unavailable) Box {
+                                Side(Sym.NotificationsOff, "Opções para ignorar atualização") { ignoreMenu = !ignoreMenu; if (ignoreMenu) vm.haptic(H.LIGHT) }
+                                DropdownMenu(ignoreMenu, { ignoreMenu = false }, shape = RoundedCornerShape(20.dp)) {
+                                    Text("Ignorar atualização", Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
+                                    DropdownMenuItem({ Text("Ignorar por 1 semana") }, { ignore("week") }, leadingIcon = { Icon(Sym.Schedule, null) })
+                                    DropdownMenuItem({ Text("Até a próxima versão") }, { ignore("version", preferredVersion(app, s.streamOf(app.id))) }, leadingIcon = { Icon(Sym.SkipNext, null) })
+                                    DropdownMenuItem({ Text("Manter na v${local.orEmpty().removePrefix("v")}") }, { ignore("cap", local) }, leadingIcon = { Icon(Sym.Lock, null) })
+                                    DropdownMenuItem({ Text("Nunca mais mostrar") }, { ignore("never") }, leadingIcon = { Icon(Sym.Block, null) })
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            }
+        },
+    ) { pad ->
+        // Sections as list pieces, so phones stack them in one column and wide screens split them into two panes
+        fun LazyListScope.top() {
+            item("head") {
+                // The bar only holds actions on the right now, so the head tucks up right under it.
+                Row(Modifier.fillMaxWidth().padding(top = pad.calculateTopPadding())
+                    .padding(start = 20.dp, end = 20.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    AppIcon(app, 96.dp, state = true, from = from, target = true)
+                    Spacer(Modifier.width(18.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(app.name, style = MaterialTheme.typography.headlineSmallEmphasized, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(app.author, style = MaterialTheme.typography.titleSmall, color = cs.primary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, false).clip(Pill).clickable(enabled = app.author.isNotBlank()) { vm.haptic(H.LIGHT); vm.devProfile = app.author to app.id })
+                            Spacer(Modifier.width(4.dp)); Icon(Sym.VerifiedFilled, "Verificado", Modifier.size(16.dp), tint = cs.primary)
+                        }
+                        val counts = listOfNotNull(app.stars?.let { "${compactCount(it)} ${if (it == 1) "estrela" else "estrelas"}" }, app.downloadCount?.takeIf { it > 0 }?.let { "${compactCount(it)} downloads" })
+                        if (counts.isNotEmpty()) Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(if (app.stars != null) Sym.StarFilled else Sym.Download, null, Modifier.size(14.dp), tint = cs.tertiary); Spacer(Modifier.width(4.dp))
+                            Text(counts.joinToString(" · "), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        statusText(app)?.let { (t, c) -> Text(t, style = MaterialTheme.typography.labelLarge, color = c, modifier = Modifier.padding(top = 2.dp)) }
+                        if (cleanup != null) Box(Modifier.padding(top = 6.dp)) { Tag("Limpeza pendente", Caution, Sym.CleaningServices) }
+                        else if (external) Box(Modifier.padding(top = 6.dp)) { Tag("Hospedado em $domain", Caution, Sym.OpenInNew) }
+                    }
+                }
+            }
+            item("stats") {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp).fillMaxWidth().height(IntrinsicSize.Min)) {
+                    @Composable fun Cell(value: @Composable () -> Unit, label: String, labelColor: Color = cs.onSurfaceVariant, onClick: (() -> Unit)? = null) =
+                        Column(Modifier.weight(1f).then(if (onClick != null) Modifier.clip(RoundedCornerShape(16.dp)).clickable(onClickLabel = label, onClick = onClick) else Modifier)
+                            .padding(horizontal = 4.dp, vertical = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(Modifier.height(28.dp), contentAlignment = Alignment.Center) { value() }
+                            Text(label, style = MaterialTheme.typography.labelMedium, color = labelColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    val divider = @Composable { VerticalDivider(Modifier.padding(vertical = 8.dp), color = cs.outlineVariant) }
+                    Cell({ Text(app.latestVersion.removePrefix("v"), style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 1, overflow = TextOverflow.Ellipsis) }, "Versão")
+                    divider()
+                    Cell({ Text(app.size, style = MaterialTheme.typography.titleMediumEmphasized, maxLines = 1) }, "Tamanho")
+                    divider()
+                    Cell({ Icon(when (app.platform) { Platform.ANDROID -> Sym.Android; Platform.TV -> Sym.Tv; else -> Sym.DesktopWindows }, null, Modifier.size(24.dp)) }, app.platform)
+                    // The package inspector, one tap from the stats: a tonal cookie that names what it found once it has looked
+                    if (canInspect) {
+                        divider()
+                        val r = InspectCache.reports[InspectCache.key(app)]
+                        androidx.compose.runtime.SideEffect { InspectCache.keep(app) }
+                        Cell({
+                            Box(Modifier.size(28.dp).background(cs.secondaryContainer, MaterialShapes.Cookie6Sided.toShape()), contentAlignment = Alignment.Center) {
+                                Icon(Sym.Science, null, Modifier.size(16.dp), tint = cs.onSecondaryContainer)
+                            }
+                        }, r?.let { when (it.trackers.size) { 0 -> "Sem rastreadores"; 1 -> "1 rastreador"; else -> "${it.trackers.size} rastreadores" } } ?: "Inspecionar", cs.primary) { vm.haptic(H.SELECTION); inspecting = true }
+                    }
+                }
+            }
+        }
+        fun LazyListScope.media() {
+            if (app.screenshots.isNotEmpty()) item("shots") {
+                val portrait = app.platform == Platform.ANDROID
+                val shots = app.screenshots
+                val wide = if (twoPane) 520.dp else 320.dp
+                val tall = if (portrait) (if (twoPane) 460.dp else 340.dp) else (if (twoPane) 300.dp else 200.dp)
+                // The wide pane has the room: screenshots grow instead of leaving the page half empty.
+                LazyRow(Modifier.reveal(1).padding(top = 8.dp), contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    items(shots.size) { i ->
+                        Shot(shots[i], wide, tall, Modifier.reveal(i), portrait = portrait) { lightbox = i; vm.haptic(H.SELECTION) }
+                    }
+                }
+            }
+            item("about") { Column(Modifier.reveal(2)) {
+                var open by remember { mutableStateOf(false) }
+                SectionTitle("Sobre este app", Modifier.padding(top = 20.dp))
+                Text(app.description, Modifier.padding(horizontal = 20.dp).animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()).clickable { open = !open },
+                    style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, maxLines = if (open) Int.MAX_VALUE else 4, overflow = TextOverflow.Ellipsis)
+                if (app.description.length > 180) TextButton({ open = !open }, Modifier.padding(start = 8.dp)) { Text(if (open) "Mostrar menos" else "Ler mais") }
+            } }
+            if (notesTag.isNotEmpty()) item("new") { WhatsNew(vm, shown, notes, needsUpdate) }
+            if (app.patches.isNotEmpty()) item("patches") { Column(Modifier.reveal(3)) {
+                // Folded like App info: one row with the count, every patch name listed once opened
+                var open by rememberSaveable { mutableStateOf(false) }
+                val list = remember(app.patches) { app.patches.distinct().sortedWith(String.CASE_INSENSITIVE_ORDER) }
+                val turn by animateFloatAsState(if (open) 180f else 0f, MaterialTheme.motionScheme.defaultSpatialSpec(), label = "chev")
+                Column(Modifier.padding(horizontal = 16.dp).padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                    SegmentedListItem({ open = !open; vm.haptic(H.SELECTION) }, ListItemDefaults.segmentedShapes(0, if (open) list.size + 1 else 1),
+                        colors = if (open) ListItemDefaults.segmentedColors(containerColor = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, leadingContentColor = cs.onTertiaryContainer,
+                            trailingContentColor = cs.onTertiaryContainer, supportingContentColor = cs.onTertiaryContainer.copy(.8f)) else ListItemDefaults.segmentedColors(containerColor = cs.surfaceContainer),
+                        leadingContent = { IconBox(Sym.Extension, if (open) cs.onTertiaryContainer else cs.tertiary) }, trailingContent = { Icon(Sym.ExpandMore, if (open) "Ocultar patches" else "Mostrar patches", Modifier.graphicsLayer { rotationZ = turn }) },
+                        supportingContent = { Text("${list.size} aplicados nesta build", maxLines = 1) }) { Text("Patches", style = MaterialTheme.typography.titleMedium) }
+                    AnimatedVisibility(open, enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(), exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                            list.forEachIndexed { i, p ->
+                                SegmentedListItem(ListItemDefaults.segmentedShapes(i + 1, list.size + 1), colors = ListItemDefaults.segmentedColors(containerColor = cs.surfaceContainer),
+                                    leadingContent = { Icon(Sym.Check, null, Modifier.size(20.dp), tint = cs.tertiary) }) { Text(p, style = MaterialTheme.typography.bodyLarge) }
+                            }
+                        }
+                    }
+                }
+            } }
+        }
+        fun LazyListScope.facts() {
+            item("source") { Column(Modifier.reveal(4)) {
+                SectionTitle("Origem e segurança", Modifier.padding(top = 20.dp))
+                val repo = app.repoUrl?.takeIf { it.isNotBlank() && it != "#" }
+                val f = fork
+                val n = 1 + (if (repo != null) 1 else 0) + (if (f != null) 1 else 0)
+                var at = 0
+                Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                    repo?.let { r ->
+                        val (mark, name, tint) = repoBrand(r)
+                        SegmentedListItem({ vm.haptic(H.SELECTION); vm.tracker.open(r) }, ListItemDefaults.segmentedShapes(at++, n), colors = ListItemDefaults.segmentedColors(containerColor = cs.surfaceContainer),
+                            leadingContent = { Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) { Icon(mark, null, Modifier.size(30.dp), tint = tint) } },
+                            trailingContent = { Icon(Sym.OpenInNew, "Abrir $name") },
+                            supportingContent = { Text(r.substringAfter("://").substringAfter('/').trimEnd('/'), maxLines = 1, overflow = TextOverflow.Ellipsis) }) { Text(name, style = MaterialTheme.typography.titleMedium) }
+                    }
+                    // A fork names its upstream, right under its own repo
+                    f?.let {
+                        SegmentedListItem({ vm.haptic(H.SELECTION); vm.tracker.open(it.url) }, ListItemDefaults.segmentedShapes(at++, n), colors = ListItemDefaults.segmentedColors(containerColor = cs.surfaceContainer),
+                            leadingContent = { IconBox(Sym.AccountTree, cs.secondary) }, trailingContent = { Icon(Sym.OpenInNew, "Abrir o projeto original") },
+                            supportingContent = { Text(listOfNotNull(it.parent, it.stars?.let { n -> "${compactCount(n)} estrelas" }).joinToString(" · "), maxLines = 1, overflow = TextOverflow.Ellipsis) }) {
+                            Text("Fork de", style = MaterialTheme.typography.titleMedium)
+                        }
+                    }
+                    SegmentedListItem({ vm.haptic(H.SELECTION); vm.vtTarget = app }, ListItemDefaults.segmentedShapes(at, n), colors = ListItemDefaults.segmentedColors(containerColor = cs.surfaceContainer),
+                        leadingContent = { IconBox(Sym.Shield) }, trailingContent = { Icon(Sym.ChevronRight, null) },
+                        supportingContent = { Text("Verifique o download em mais de 70 mecanismos antivírus", maxLines = 1, overflow = TextOverflow.Ellipsis) }) { Text("Verificar no VirusTotal", style = MaterialTheme.typography.titleMedium) }
+                }
+            } }
+            item("info") { Column(Modifier.reveal(5)) {
+                var open by rememberSaveable { mutableStateOf(false) }
+                val rows = listOfNotNull(
+                    local?.takeIf { installed }?.let { Triple(Sym.CheckCircle, "Instalado", it) }, Triple(Sym.Person, "Desenvolvedor", app.author), Triple(Sym.Storage, "Tamanho", app.size),
+                    app.githubRepo?.takeIf { it.isNotBlank() }?.let { Triple(Sym.BrandGitHub, "GitHub", it) }, app.gitlabRepo?.takeIf { it.isNotBlank() }?.let { Triple(Sym.BrandGitLab, "GitLab", it) },
+                    app.codebergRepo?.takeIf { it.isNotBlank() }?.let { Triple(Sym.BrandCodeberg, "Codeberg", it) },
+                    app.packageName?.takeIf { it.isNotBlank() }?.let { Triple(Sym.Package2, "Pacote", it) },
+                )
+                val turn by animateFloatAsState(if (open) 180f else 0f, MaterialTheme.motionScheme.defaultSpatialSpec(), label = "chev")
+                Column(Modifier.padding(horizontal = 16.dp).padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                    SegmentedListItem({ open = !open; vm.haptic(H.SELECTION) }, ListItemDefaults.segmentedShapes(0, if (open) rows.size + 1 else 1),
+                        colors = ListItemDefaults.segmentedColors(containerColor = if (open) cs.secondaryContainer else cs.surfaceContainer),
+                        leadingContent = { IconBox(Sym.Info) }, trailingContent = { Icon(Sym.ExpandMore, if (open) "Ocultar informações do app" else "Mostrar informações do app", Modifier.graphicsLayer { rotationZ = turn }) },
+                        supportingContent = { Text(if (open) "Toque para ocultar" else "Desenvolvedor, tamanho, pacote e origem", maxLines = 1) }) { Text("Informações do app", style = MaterialTheme.typography.titleMedium) }
+                    AnimatedVisibility(open, enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(), exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                            rows.forEachIndexed { i, (ic, k, v) ->
+                                SegmentedListItem(ListItemDefaults.segmentedShapes(i + 1, rows.size + 1), colors = ListItemDefaults.segmentedColors(containerColor = cs.surfaceContainer),
+                                    leadingContent = { Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) { Icon(ic, null, Modifier.size(22.dp)) } }, overlineContent = { Text(k) }) {
+                                    SelectionContainer { Text(v, style = MaterialTheme.typography.bodyLarge) }
+                                }
+                            }
+                        }
+                    }
+                }
+            } }
+        }
+        // The icon's color washes the top of the page from edge to edge, behind both panes, and scrolls away with the head
+        val wash by animateColorAsState(iconColor(app)?.let { tonal(it).first } ?: cs.surfaceContainer, MaterialTheme.motionScheme.slowEffectsSpec(), label = "wash")
+        val bottom = PaddingValues(bottom = pad.calculateBottomPadding() + 24.dp)
+        Box(Modifier.fillMaxSize()) {
+            // Height capped, so on big screens it stays a soft band instead of a billboard; it fades as either pane scrolls
+            Box(Modifier.fillMaxWidth().height(pad.calculateTopPadding() + 150.dp)
+                .graphicsLayer {
+                    fun gone(l: LazyListState) = if (l.firstVisibleItemIndex > 0) 1f else (l.firstVisibleItemScrollOffset / size.height).coerceIn(0f, 1f)
+                    val k = maxOf(gone(list), if (twoPane) gone(media) else 0f)
+                    if (twoPane) alpha = 1f - k else translationY = -k * size.height
+                }
+                .background(Brush.verticalGradient(listOf(wash, cs.surface))))
+            if (twoPane) Row(Modifier.fillMaxSize().wrapContentWidth().widthIn(max = 1280.dp)) {
+                LazyColumn(Modifier.fillMaxHeight().fillMaxWidth(.36f).widthIn(min = 340.dp, max = 460.dp), list, contentPadding = bottom) { top(); facts() }
+                LazyColumn(Modifier.weight(1f).fillMaxHeight(), media, contentPadding = PaddingValues(top = pad.calculateTopPadding(), bottom = bottom.calculateBottomPadding())) { media() }
+            } else LazyColumn(Modifier.fillMaxSize().readableWidth(), list, contentPadding = bottom) { top(); media(); facts() }
+        }
+    }
+
+    if (versions) AlphaStoreSheet({ versions = false }) {
+        SheetTitle("Selecionar versão", Sym.History, "Escolha seu canal de lançamento")
+        val versionCap = (app.availableVersions.size * 76).coerceAtMost((LocalConfiguration.current.screenHeightDp * 0.62f).toInt()).coerceAtLeast(88).dp
+        LazyColumn(Modifier.fillMaxWidth().height(versionCap).navigationBarsPadding(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+            items(app.availableVersions.size, key = { app.availableVersions[it].version + it }) { i ->
+                val v = app.availableVersions[i]
+                SegmentedListItem({ versions = false; target = v; proceed(v) }, ListItemDefaults.segmentedShapes(i, app.availableVersions.size), colors = ListItemDefaults.segmentedColors(containerColor = cs.surfaceContainerHigh),
+                    leadingContent = { IconBox(Sym.Layers, streamColor(v.type)) }, trailingContent = { Icon(Sym.ChevronRight, null) },
+                    supportingContent = { Text(v.date) }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) { Text(v.version, fontWeight = FontWeight.Bold); Spacer(Modifier.width(8.dp)); StreamBadge(v.type) }
+                }
+            }
+        }
+    }
+
+    if (variants) AlphaStoreSheet({ variants = false }) {
+        val (raw, abis) = remember { vm.tracker.deviceArch() }
+        val list2 = remember(target) {
+            (target?.variants ?: app.variants).distinctBy { it.url }.map { it to archCompat(it.arch, raw, abis) }
+                .sortedWith(compareByDescending<Pair<AppVariant, Pair<Boolean, Boolean>>> { it.second.second }.thenByDescending { it.second.first })
+        }
+        Row(Modifier.padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Selecionar opção de download", style = MaterialTheme.typography.headlineSmallEmphasized)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Alvo:", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant); Spacer(Modifier.width(6.dp))
+                    Text(target?.version ?: app.latestVersion, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold); Spacer(Modifier.width(6.dp))
+                    StreamBadge(target?.type ?: "Stable")
+                }
+            }
+        }
+        Surface(Modifier.padding(16.dp).fillMaxWidth(), shape = RoundedCornerShape(24.dp), color = cs.secondaryContainer) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Sym.Memory, null); Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Arquitetura do dispositivo", style = MaterialTheme.typography.labelMedium)
+                    Text(friendlyArch(raw), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                if (normalizeArch(raw) != Arch.Unknown) Tag("Seu celular", cs.primary)
+            }
+        }
+        Column(Modifier.weight(1f, false).heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.5f).dp).verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+            list2.forEachIndexed { i, (v, c) ->
+                val (compat, rec) = c
+                val displayName = v.name.ifBlank { v.url.substringBefore('?').substringAfterLast('/') }.ifBlank { v.arch }
+                val sizeStr = v.size?.let(CatalogProcessor::formatSize)
+                val subText = listOfNotNull(
+                    if (rec) "Recomendado para seu celular" else if (compat) "Compatível" else "Pode não ser compatível",
+                    sizeStr
+                ).joinToString(" · ")
+                SegmentedListItem({ variants = false; action(v.url) }, ListItemDefaults.segmentedShapes(i, list2.size),
+                    colors = if (rec) ListItemDefaults.segmentedColors(containerColor = cs.primaryContainer, contentColor = cs.onPrimaryContainer) else ListItemDefaults.segmentedColors(containerColor = cs.surfaceContainerHigh),
+                    leadingContent = {
+                        val isTv = "tv" in v.arch.lowercase() || "tv" in displayName.lowercase()
+                        Box(Modifier.size(40.dp).clip(if (rec) MaterialShapes.Cookie6Sided.toShape() else CircleShape).background(cs.primary.copy(if (rec) .2f else .1f)), contentAlignment = Alignment.Center) {
+                            Icon(if (isTv) Sym.Tv else Sym.DeveloperBoard, null, tint = cs.primary)
+                        }
+                    },
+                    trailingContent = { Icon(Sym.Download, null) },
+                    supportingContent = { Text(subText, maxLines = 1, overflow = TextOverflow.Ellipsis) }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(displayName, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, false))
+                        Spacer(Modifier.width(8.dp))
+                        Tag(v.arch, if (rec) cs.primary else cs.secondary)
+                        if (rec) { Spacer(Modifier.width(6.dp)); Tag("Recomendado", cs.primary) }
+                    }
+                }
+            }
+        }
+    }
+
+    if (microG) AlertDialog({ microG = false },
+        confirmButton = { Button({ microG = false; vm.navigateToApp("microG-re") }, shapes = ButtonDefaults.shapes()) { Text("Instalar MicroG") } },
+        dismissButton = { TextButton({ microG = false; vm.tracker.open(Defaults.MICROG_INFO_URL) }) { Text("Saiba mais sobre o MicroG") } },
+        icon = { Icon(Sym.GppMaybe, null, tint = Caution) }, title = { Text("MicroG necessário") },
+        text = { Text("Este app requer o MicroG para entrar na sua Conta do Google. Certifique-se de tê-lo instalado primeiro.") })
+
+    if (cleanupPrompt && cleanup != null) AlertDialog({ if (!cleaning) keep() },
+        confirmButton = { AnimatedVisibility(!cleaning) { Button({ cleanupDelete() }, shapes = ButtonDefaults.shapes()) { Icon(Sym.Delete, null); Spacer(Modifier.width(6.dp)); Text("Excluir APK") } } },
+        dismissButton = { AnimatedVisibility(!cleaning) { TextButton({ keep() }) { Text("Manter por agora") } } },
+        icon = { if (cleaning) LoadingIndicator(Modifier.size(48.dp)) else Icon(Sym.CleaningServices, null) },
+        title = { Text(if (cleaning) "Limpando..." else "Hora da limpeza!") },
+        text = {
+            Text(if (cleaning) AnnotatedString("Recuperando espaço para você") else buildAnnotatedString {
+                append("O APK de "); withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(app.name) }; append(" não é mais necessário.")
+            })
+        })
+
+    if (shareSheet) ShareLinksSheet(vm, app) { shareSheet = false }
+    if (inspecting) InspectSheet(vm, app) { inspecting = false }
+    lightbox?.let { Lightbox(app.screenshots, it) { lightbox = null } }
+}
+
+private const val NOTES_FAILED = "\u0000"
+
+
+/** The release notes of the version Download would fetch, folded into one row that shows at once; the notes fill in when they arrive. */
+@Composable
+private fun WhatsNew(vm: MainViewModel, v: VersionOption?, notes: String?, update: Boolean) {
+    val cs = MaterialTheme.colorScheme
+    var open by rememberSaveable(v?.tag) { mutableStateOf(false) }
+    val turn by animateFloatAsState(if (open) 180f else 0f, MaterialTheme.motionScheme.defaultSpatialSpec(), label = "chev")
+    // An update wears the secondary container pair: tinted enough to stand out, and its on-color keeps the text readable on every palette
+    val (bg, fg) = if (update) cs.secondaryContainer to cs.onSecondaryContainer else cs.surfaceContainer to cs.onSurface
+    Surface(Modifier.padding(horizontal = 16.dp).padding(top = 20.dp).fillMaxWidth().animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()),
+        shape = RoundedCornerShape(24.dp), color = bg, contentColor = fg) {
+        Column {
+            Row(Modifier.fillMaxWidth().clickable { open = !open; vm.haptic(H.SELECTION) }.padding(16.dp, 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconBox(Sym.NewReleases, if (update) cs.onSecondaryContainer else cs.primary)
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Novidades", style = MaterialTheme.typography.titleMedium)
+                    Text(listOfNotNull(v?.version?.let { (if (update) "Atualizar para " else "Versão ") + it.removePrefix("v") }, v?.date?.ifBlank { null }).joinToString(" · "),
+                        style = MaterialTheme.typography.bodyMedium, color = if (update) fg.copy(.8f) else cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Icon(Sym.ExpandMore, if (open) "Ocultar changelog" else "Mostrar changelog", Modifier.graphicsLayer { rotationZ = turn })
+            }
+            if (open) when (notes) {
+                null -> Box(Modifier.fillMaxWidth().padding(bottom = 18.dp), contentAlignment = Alignment.Center) { LoadingIndicator(Modifier.size(40.dp), color = fg) }
+                NOTES_FAILED, "" -> Text(if (notes.isEmpty()) "Esta versão não veio com notas." else "Não foi possível carregar as notas da versão agora.",
+                    Modifier.padding(start = 20.dp, end = 20.dp, bottom = 18.dp), style = MaterialTheme.typography.bodyMedium, color = fg.copy(.8f))
+                else -> SelectionContainer {
+                    Text(notesText(notes), Modifier.padding(start = 20.dp, end = 20.dp, bottom = 18.dp).heightIn(max = 560.dp).verticalScroll(rememberScrollState()),
+                        style = MaterialTheme.typography.bodyMedium, color = fg.copy(.9f))
+                }
+            }
+        }
+    }
+}
+
+private val INLINE = Regex("""\*\*(.+?)\*\*|`([^`]+)`""")
+
+/** Headings bold, **bold** and `code` styled, the markers dropped. */
+private fun notesText(t: String) = buildAnnotatedString {
+    t.lines().forEachIndexed { i, raw ->
+        if (i > 0) append('\n')
+        val h = raw.trimStart().startsWith("#")
+        val line = if (h) raw.trimStart().trimStart('#').trim() else raw
+        if (h) withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(line.replace("**", "")) }
+        else INLINE.let { re ->
+            var at = 0
+            re.findAll(line).forEach { m ->
+                append(line.substring(at, m.range.first))
+                if (m.groupValues[1].isNotEmpty()) withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(m.groupValues[1]) }
+                else withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) { append(m.groupValues[2]) }
+                at = m.range.last + 1
+            }
+            append(line.substring(at))
+        }
+    }
+}
+
+/** 40dp tonal icon container for list rows. */
+@Composable
+private fun repoBrand(url: String): Triple<ImageVector, String, Color> = when {
+    "gitlab" in url -> Triple(Sym.BrandGitLab, "GitLab", Color(0xFFFC6D26))
+    "codeberg" in url -> Triple(Sym.BrandCodeberg, "Codeberg", Color(0xFF2185D0))
+    "github" in url -> Triple(Sym.BrandGitHub, "GitHub", MaterialTheme.colorScheme.onSurface)
+    else -> Triple(Sym.Code, "Código-fonte", MaterialTheme.colorScheme.primary)
+}
+
+@Composable
+fun IconBox(icon: ImageVector, tint: Color = MaterialTheme.colorScheme.primary) =
+    Box(Modifier.size(40.dp).clip(CircleShape).background(tint.copy(.12f)), contentAlignment = Alignment.Center) { Icon(icon, null, Modifier.size(22.dp), tint = tint) }
+
+@Composable
+fun Lightbox(shots: List<String>, start: Int, onClose: () -> Unit) = Dialog(onClose, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+    // The dialog is its own window: hide its system bars too, so screenshots open truly full screen (swipe from an edge to peek).
+    val view = androidx.compose.ui.platform.LocalView.current
+    DisposableEffect(view) {
+        (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let { w ->
+            androidx.core.view.WindowCompat.getInsetsController(w, view).run {
+                systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        onDispose { }
+    }
+    val n = shots.size
+    val pager = rememberPagerState(start) { n }; val scope = rememberCoroutineScope()
+    var zoom by remember { mutableFloatStateOf(1f) }; var pan by remember { mutableStateOf(Offset.Zero) }
+    LaunchedEffect(pager.currentPage) { zoom = 1f; pan = Offset.Zero }
+    val tf = rememberTransformableState { z, p, _ -> zoom = (zoom * z).coerceIn(1f, 4f); pan = if (zoom > 1f) pan + p else Offset.Zero }
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        HorizontalPager(pager, Modifier.fillMaxSize(), userScrollEnabled = zoom == 1f, beyondViewportPageCount = 1) { i ->
+            val cur = i == pager.currentPage
+            AsyncImage(optimizedImageUrl(shots[i], null, 1600), "Captura de tela ${i + 1}", Modifier.fillMaxSize()
+                .then(if (cur) Modifier.pointerInput(Unit) { detectTapGestures(onDoubleTap = { if (zoom > 1f) { zoom = 1f; pan = Offset.Zero } else zoom = 2.5f }) }.transformable(tf, canPan = { zoom > 1f }) else Modifier)
+                .graphicsLayer { if (cur) { scaleX = zoom; scaleY = zoom; translationX = pan.x; translationY = pan.y } }, contentScale = ContentScale.Fit)
+        }
+        val chrome = IconButtonDefaults.filledTonalIconButtonColors(Color.White.copy(.14f), Color.White)
+        if (n > 1 && zoom == 1f) {
+            FilledTonalIconButton({ scope.launch { pager.animateScrollToPage((pager.currentPage - 1 + n) % n) } }, Modifier.align(Alignment.CenterStart).padding(12.dp), colors = chrome) { Icon(Sym.ChevronLeft, "Anterior") }
+            FilledTonalIconButton({ scope.launch { pager.animateScrollToPage((pager.currentPage + 1) % n) } }, Modifier.align(Alignment.CenterEnd).padding(12.dp), colors = chrome) { Icon(Sym.ChevronRight, "Próxima") }
+            Text("${pager.currentPage + 1} / $n", Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(20.dp).clip(Pill).background(Color.White.copy(.14f)).padding(horizontal = 14.dp, vertical = 6.dp),
+                color = Color.White, style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+@Composable
+private fun ShareLinksSheet(vm: MainViewModel, app: AppItem, onDismiss: () -> Unit) = AlphaStoreSheet(onDismiss) {
+    val clip = LocalClipboardManager.current; val cs = MaterialTheme.colorScheme
+    var open by remember { mutableStateOf<String?>(null) }; var copied by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(copied) { if (copied != null) { delay(2000); copied = null } }
+    val web = Share.webLink(app.id)
+    data class Row5(val key: String, val label: String, val helper: String, val value: String, val action: String, val multi: Boolean)
+    val rows = listOf(
+        Row5("deep", "Link direto", "Abre a AlphaStore diretamente neste app", Share.deepLink(app.id), "Copiar", false),
+        Row5("web", "Link web", "Usa a página de redirecionamento antes de abrir o app", web, "Copiar", false),
+        Row5("md", "Badge Markdown", "Trecho de badge para READMEs e posts em Markdown", Share.markdown(web), "Copiar Markdown", true),
+        Row5("html", "Badge HTML", "Trecho de badge para sites e páginas incorporadas", Share.html(web), "Copiar HTML", true),
+    )
+    SheetTitle("Links profundos de desenvolvedor", Sym.Link)
+    Text(buildAnnotatedString { append("Abra um item por vez para copiar links e trechos de badge de "); withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(app.name) }; append(".") },
+        Modifier.padding(horizontal = 24.dp), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+    Column(Modifier.navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+        rows.forEachIndexed { i, r ->
+            val on = open == r.key
+            Surface(shape = ListItemDefaults.segmentedShapes(i, rows.size).shape, color = cs.surfaceContainerHigh) {
+                Column {
+                    ListItem({ Text(r.label, fontWeight = FontWeight.Bold) }, Modifier.clickable { open = if (on) null else r.key; vm.haptic(H.SELECTION) },
+                        supportingContent = { Text(r.helper) }, trailingContent = { Icon(if (on) Sym.ExpandLess else Sym.ExpandMore, null) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent))
+                    AnimatedVisibility(on) {
+                        Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                            SelectionContainer {
+                                Text(r.value, Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerLowest).padding(12.dp),
+                                    style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, maxLines = if (r.multi) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            FilledTonalButton({ clip.setText(AnnotatedString(r.value)); copied = r.key; vm.haptic(H.SUCCESS) }, modifier = Modifier.padding(top = 10.dp), shapes = ButtonDefaults.shapes()) {
+                                Icon(if (copied == r.key) Sym.Check else Sym.ContentCopy, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
+                                Text(if (copied == r.key) "Copiado" else r.action)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

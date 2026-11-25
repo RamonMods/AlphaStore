@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">AlphaStore</string>
+    <string name="welcome">欢迎使用 AlphaStore</string>
+    <string name="settings">设置</string>
+    <string name="search">搜索</string>
+    <string name="updates">更新</string>
+    <string name="my_apps">我的应用</string>
+    <string name="home">首页</string>
+</resources>
