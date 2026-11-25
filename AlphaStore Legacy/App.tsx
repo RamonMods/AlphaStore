@@ -99,18 +99,18 @@ const CURRENT_STORE_VERSION = '1.5.5';
 const UNITY_GAME_ID = '5996387';
 const ADS_TEST_MODE = false;
 
-const CONFIG_URL_PRIMARY = 'https://raw.githubusercontent.com/RamonMods/AlphaStore-Data/main/config.json';
-const APPS_URL_PRIMARY = 'https://raw.githubusercontent.com/RamonMods/AlphaStore-Data/main/apps.json';
+const CONFIG_URL_PRIMARY = 'https://raw.githubusercontent.com/RamonMods/AlphaStore/main/config.json';
+const APPS_URL_PRIMARY = 'https://raw.githubusercontent.com/RamonMods/AlphaStore/main/apps.json';
 
-const CONFIG_URL_GITLAB = 'https://gitlab.com/RamonMods/AlphaStore-Data/-/raw/main/config.json';
-const APPS_URL_GITLAB = 'https://gitlab.com/RamonMods/AlphaStore-Data/-/raw/main/apps.json';
+const CONFIG_URL_GITLAB = 'https://gitlab.com/RamonMods/AlphaStore/-/raw/main/config.json';
+const APPS_URL_GITLAB = 'https://gitlab.com/RamonMods/AlphaStore/-/raw/main/apps.json';
 
-const CONFIG_URL_CODEBERG = 'https://codeberg.org/RamonMods/AlphaStore-Data/raw/branch/main/config.json';
-const APPS_URL_CODEBERG = 'https://codeberg.org/RamonMods/AlphaStore-Data/raw/branch/main/apps.json';
+const CONFIG_URL_CODEBERG = 'https://codeberg.org/RamonMods/AlphaStore/raw/branch/main/config.json';
+const APPS_URL_CODEBERG = 'https://codeberg.org/RamonMods/AlphaStore/raw/branch/main/apps.json';
 
-const APPS_URL_FALLBACK = 'https://cdn.jsdelivr.net/gh/RamonMods/AlphaStore-Data@main/apps.json';
-const CONFIG_URL_FALLBACK = 'https://cdn.jsdelivr.net/gh/RamonMods/AlphaStore-Data@main/config.json';
-const DEFAULT_MIRROR_JSON = 'https://raw.githubusercontent.com/RamonMods/AlphaStore-Data/data/mirror.json';
+const APPS_URL_FALLBACK = 'https://cdn.jsdelivr.net/gh/RamonMods/AlphaStore@main/apps.json';
+const CONFIG_URL_FALLBACK = 'https://cdn.jsdelivr.net/gh/RamonMods/AlphaStore@main/config.json';
+const DEFAULT_MIRROR_JSON = 'https://raw.githubusercontent.com/RamonMods/AlphaStore/data/mirror.json';
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const PACKAGE_SUFFIXES = ['.preview', '.debug', '.test', '.beta', '.canary', '.dev', '.alpha', '.nightly', '.staging', '.release'];
@@ -3082,7 +3082,7 @@ const App: React.FC = () => {
     //                          (NEVER overwrites a remote bundle's badge)
     //
     // Both "Aprovado pela Equipe" and "Community Shared" are therefore set in the
-    // upstream AlphaStore-Data config.json by the maintainer — never on-device. The
+    // upstream AlphaStore config.json by the maintainer — never on-device. The
     // only badge we attach client-side is "Local" for the user's own creations
     // (whether or not they later submitted them as a GitHub issue).
     const customLocalBundles = useMemo<BundleItem[]>(() => {

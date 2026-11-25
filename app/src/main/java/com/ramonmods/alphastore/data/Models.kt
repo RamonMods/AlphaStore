@@ -109,14 +109,14 @@ object Defaults {
     const val CACHE_VERSION = "v1_6"
     const val NETWORK_TIMEOUT_MS = 8000L
     const val RELEASES_API = "https://api.github.com/repos/RamonMods/AlphaStore/releases?per_page=8"
-    const val MIRROR_JSON = "https://raw.githubusercontent.com/RamonMods/AlphaStore-Data/data/mirror.json"
+    const val MIRROR_JSON = "https://raw.githubusercontent.com/RamonMods/AlphaStore/data/mirror.json"
     /** owner/repo (lowercase) to GitHub stars, built by the mirror workflow so the app never spends API calls on it. */
-    const val STARS_JSON = "https://raw.githubusercontent.com/RamonMods/AlphaStore-Data/data/stars.json"
+    const val STARS_JSON = "https://raw.githubusercontent.com/RamonMods/AlphaStore/data/stars.json"
     /** GitHub first, then two CDNs that serve the same files for networks blocking raw.githubusercontent.com. */
     val CONFIG_URLS = listOf(
-        "https://raw.githubusercontent.com/RamonMods/AlphaStore-Data/main/config.json",
-        "https://cdn.jsdelivr.net/gh/RamonMods/AlphaStore-Data@main/config.json",
-        "https://raw.githack.com/RamonMods/AlphaStore-Data/main/config.json",
+        "https://raw.githubusercontent.com/RamonMods/AlphaStore/main/config.json",
+        "https://cdn.jsdelivr.net/gh/RamonMods/AlphaStore@main/config.json",
+        "https://raw.githack.com/RamonMods/AlphaStore/main/config.json",
     )
     val APPS_URLS = CONFIG_URLS.map { it.replace("config.json", "apps.json") }
     val MIRROR_LABELS = listOf("GitHub", "JSDelivr", "GitHack")

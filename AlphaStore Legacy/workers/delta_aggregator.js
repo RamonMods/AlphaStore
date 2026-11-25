@@ -23,8 +23,8 @@ const CORS_HEADERS = {
 };
 
 // CONSTANTS - Pointing to the Ghost Branch data source
-const APPS_URL = 'https://raw.githubusercontent.com/RamonMods/AlphaStore-Data/main/apps.json';
-const MIRROR_URL = 'https://raw.githubusercontent.com/RamonMods/AlphaStore-Data/data/mirror.json';
+const APPS_URL = 'https://raw.githubusercontent.com/RamonMods/AlphaStore/main/apps.json';
+const MIRROR_URL = 'https://raw.githubusercontent.com/RamonMods/AlphaStore/data/mirror.json';
 
 export default {
   async fetch(request, env, ctx) {

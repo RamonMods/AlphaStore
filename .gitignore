@@ -29,13 +29,9 @@ yarn-debug.log*
 yarn-error.log*
 .vscode/
 
-# Data files (managed in the AlphaStore-Data repo)
-apps.json
-config.json
+# Data files (mirror.json lives on data branch)
 mirror.json
-mirror_config.json
 notice_v1.2.3.json
-release_notes.json
 RELEASE_NOTES_*.md
 storefront_modules.example.json
 

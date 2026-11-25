@@ -1,4 +1,4 @@
-export const BADGE_BASE_URL = 'https://ramonmods.github.io/AlphaStore-Data';
+export const BADGE_BASE_URL = 'https://ramonmods.github.io/AlphaStore';
 
 interface DeepLinkShareArtifacts {
   deepLink: string;

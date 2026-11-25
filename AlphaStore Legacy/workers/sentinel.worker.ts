@@ -1,7 +1,7 @@
 // 🛡️ ALPHASTORE SENTINEL WORKER (INTELLIGENCE CORE)
 // Handles high-performance threat detection with sharded database support.
 
-const SHARD_URL_BASE = 'https://cdn.jsdelivr.net/gh/RamonMods/AlphaStore-Data@data/sentinel/shard_';
+const SHARD_URL_BASE = 'https://cdn.jsdelivr.net/gh/RamonMods/AlphaStore@data/sentinel/shard_';
 const CACHE_NAME = 'alphastore-sentinel-db-v1';
 const BUCKETS = ['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'];
 

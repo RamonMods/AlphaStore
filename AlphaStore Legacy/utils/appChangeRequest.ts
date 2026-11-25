@@ -62,5 +62,5 @@ export const buildAppUpdateIssueUrl = (input: {
     '*Apply the `approved` label and run the App Update workflow to merge this change.*'
   ].join('\n');
 
-  return `https://github.com/RamonMods/AlphaStore-Data/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
+  return `https://github.com/RamonMods/AlphaStore/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
 };

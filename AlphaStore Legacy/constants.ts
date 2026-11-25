@@ -6,7 +6,7 @@ export const CACHE_VERSION = 'v1_6'; // Increment this to force-clear client cac
 export const NETWORK_TIMEOUT_MS = 8000;
 
 // --- REMOTE DATA ENDPOINTS ---
-export const RELEASE_NOTES_URL = 'https://raw.githubusercontent.com/RamonMods/AlphaStore-Data/main/release_notes.json';
+export const RELEASE_NOTES_URL = 'https://raw.githubusercontent.com/RamonMods/AlphaStore/main/release_notes.json';
 
 // --- IMAGE PROXY CONFIGURATION ---
 // To use your own Cloudflare Worker:

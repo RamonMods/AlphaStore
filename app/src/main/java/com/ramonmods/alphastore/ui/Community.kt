@@ -906,7 +906,7 @@ fun CustomBundleSheet(vm: MainViewModel, onDismiss: () -> Unit) = AlphaStoreShee
                     runCatching {
                         save(true)
                         val body = bundleIssueBody(title.trim(), desc.trim(), icon, COLOR_CHOICES[color], picked, all, s.userProfile?.name)
-                        vm.tracker.open("https://github.com/RamonMods/AlphaStore-Data/issues/new?title=${enc("[Bundle] ${title.trim()}")}&body=${enc(body)}&labels=bundle-submission")
+                        vm.tracker.open("https://github.com/RamonMods/AlphaStore/issues/new?title=${enc("[Bundle] ${title.trim()}")}&body=${enc(body)}&labels=bundle-submission")
                     }.onSuccess { step = 3; vm.haptic(H.SUCCESS) }.onFailure { err = it.message ?: "Não foi possível enviar o pacote. Tente novamente." }
                 }, modifier = Modifier.weight(1f).height(56.dp), enabled = can, shapes = ButtonDefaults.shapes()) { Text("Enviar") }
             }

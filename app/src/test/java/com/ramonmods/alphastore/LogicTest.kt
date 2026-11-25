@@ -145,7 +145,7 @@ class LogicTest {
 
     @Test fun submissionUrls() {
         val u = submissionIssueUrl("[]", 2, "Foo", "1.5.5")
-        assertTrue(u.startsWith("https://github.com/RamonMods/AlphaStore-Data/issues/new?title="))
+        assertTrue(u.startsWith("https://github.com/RamonMods/AlphaStore/issues/new?title="))
         assertTrue(enc("App Submission [2 Apps] - Foo") in u)
         val body = bundleIssueBody("T", "D", "fa-bolt", "c", listOf("a", "zz"), listOf(AppItem(id = "a", name = "A", packageName = "p.a")), null)
         assertTrue("- **A** (`a`) · `p.a`" in body)

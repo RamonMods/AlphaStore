@@ -39,7 +39,7 @@
 
 **AlphaStore** é um cliente de loja de apps para Android, focado em transparência. O app usa catálogo público em JSON, resolve releases do GitHub, GitLab e Codeberg e mantém o caminho de entrega compreensível — dá para ver de onde as coisas vêm e como as atualizações são descobertas.
 
-Este repositório é o aplicativo cliente. O catálogo, configurações, avisos e metadados usados pelo app são mantidos separadamente em [RamonMods/AlphaStore-Data](https://github.com/RamonMods/AlphaStore-Data), mantendo a UI e os dados da loja separados.
+Este repositório é o aplicativo cliente. O catálogo, configurações, avisos e metadados usados pelo app são mantidos separadamente em [RamonMods/AlphaStore](https://github.com/RamonMods/AlphaStore), mantendo a UI e os dados da loja separados.
 
 > AlphaStore é para quem se importa de onde o software vem, não só com a velocidade do download.
 
@@ -102,7 +102,7 @@ No Windows:
 
 ## Dados e catálogo
 
-O cliente consome dados do repositório [RamonMods/AlphaStore-Data](https://github.com/RamonMods/AlphaStore-Data). Para mudar catálogo/fontes/mirrors, atualize a configuração de dados e os endpoints correspondentes.
+O cliente consome dados do repositório [RamonMods/AlphaStore](https://github.com/RamonMods/AlphaStore). Para mudar catálogo/fontes/mirrors, atualize a configuração de dados e os endpoints correspondentes.
 
 ## Contribuir
 

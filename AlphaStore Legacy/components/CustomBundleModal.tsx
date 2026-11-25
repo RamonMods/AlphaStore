@@ -190,7 +190,7 @@ const CustomBundleModal: React.FC<CustomBundleModalProps> = ({ onClose, allApps,
         allApps,
         submitter: userProfile?.name,
       });
-      const url = `https://github.com/RamonMods/AlphaStore-Data/issues/new?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(body)}&labels=bundle-submission`;
+      const url = `https://github.com/RamonMods/AlphaStore/issues/new?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(body)}&labels=bundle-submission`;
       updateCustomBundle(id, { submittedAt: Date.now() });
       window.open(url, '_blank', 'noopener,noreferrer');
       setStep(3);

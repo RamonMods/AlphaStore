@@ -89,7 +89,7 @@ private val CHAPTERS = listOf(
         Feature(Sym.VisibilityOff, "Não gerenciar um app", "Mantenha um app que você atualiza em outro lugar fora de Meus Apps e das atualizações pelo menu ⋮, ou ignore todos os apps de outras lojas nas Configurações. Traga-os de volta em Não gerenciados."),
         Feature(Sym.Person, "Página do desenvolvedor", "Toque no nome do desenvolvedor na página de um app para ver todos os apps dele na AlphaStore."),
         Feature(Sym.SaveAlt, "Exportar e baixar novamente", "Salve o APK na pasta Downloads, baixe de novo ou exclua uma cópia salva para liberar espaço."),
-        Feature(Sym.Share, "Compartilhar links e selos", "Compartilhe um link curto da web (ramonmods.github.io/AlphaStore-Data/app/?id=...) que abre o app na AlphaStore, um link direto ou um selo Markdown ou HTML para seu README."),
+        Feature(Sym.Share, "Compartilhar links e selos", "Compartilhe um link curto da web (ramonmods.github.io/AlphaStore/app/?id=...) que abre o app na AlphaStore, um link direto ou um selo Markdown ou HTML para seu README."),
         Feature(Sym.EditNote, "Solicitar alteração", "Notou um ícone errado, link quebrado ou descrição antiga? Envie uma correção para exatamente esse campo."),
         Feature(Sym.Report, "Relatar um problema", "Download quebrado? Relate pela página do app e os detalhes já vêm preenchidos."),
         Feature(Sym.Extension, "Ajuda do MicroG", "Apps que precisam do MicroG avisam, com um link para instalar e um guia para saber mais."),

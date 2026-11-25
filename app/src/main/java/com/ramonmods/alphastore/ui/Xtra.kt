@@ -421,7 +421,7 @@ private fun GuardRow(tracker: AppTracker, pkg: String, name: String, i: Int, n: 
 
 // ---------------- Sentinel (SentinelModal + workers/sentinel.worker.ts) ----------------
 
-private const val SHARD_URL = "https://cdn.jsdelivr.net/gh/RamonMods/AlphaStore-Data@data/sentinel/shard_"
+private const val SHARD_URL = "https://cdn.jsdelivr.net/gh/RamonMods/AlphaStore@data/sentinel/shard_"
 private val BUCKETS = "0123456789abcdef".map { it.toString() }
 private val KNOWN_THREATS = mapOf(
     "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f" to "EICAR Test File (Safe)", "131f95c51cc819465fa1797f6ccacf9d494aaaff46fa3eac73ae63bb9ea99a42" to "EICAR Test File (Zip)",
