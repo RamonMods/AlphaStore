@@ -207,7 +207,7 @@ fun AboutTab(vm: MainViewModel, padding: PaddingValues) {
                 TonalIcon(Sym.Coffee, Caution); Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text("Me pague um café", style = MaterialTheme.typography.titleMedium)
-                    Text("Ko-fi, UPI ou PayPal", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    Text("Pix", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                 }
                 Icon(Sym.ChevronRight, null)
             }
@@ -369,7 +369,7 @@ private fun Code(text: String, modifier: Modifier = Modifier) = SelectionContain
 fun DonationSheet(vm: MainViewModel, donation: DonationConfig, onDismiss: () -> Unit) {
     data class DRow(val key: String, val label: String, val helper: String, val value: String, val icon: ImageVector, val c: Color, val copy: String?, val open: String?)
     val rows = listOfNotNull(
-        donation.kofiUrl?.let { DRow("kofi", "Ko-fi", "Apoie a AlphaStore pelo Ko-fi", it, Sym.Coffee, Color(0xFF29ABE0), null, "Abrir Ko-fi") },
+        donation.kofiUrl?.let { DRow("pix", "Pix", "Apoie a AlphaStore via Pix", it, Sym.Coffee, Color(0xFF29ABE0), null, "Abrir Pix") },
         donation.upiId?.let { DRow("upi", "UPI", "Copie o ID UPI para pagar pelo seu app", it, Sym.QrCode2, Color(0xFF22C55E), "Copiar UPI", null) },
         donation.paypalUrl?.let { DRow("paypal", "PayPal", "Abra o PayPal ou copie o link de pagamento", it, Sym.Payments, Color(0xFF0070BA), "Copiar PayPal", "Abrir PayPal") },
     )
