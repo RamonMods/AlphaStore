@@ -386,7 +386,7 @@ fun InspectPage(r: ApkInsights.Report) {
             Line("Páginas de 16 KB", if (ok) "Pronto" else "${r.unaligned.size} não prontos", warn = !ok,
                 sub = if (ok) "Todas as bibliotecas de 64 bits funcionam em celulares Android 15+ com páginas de memória de 16 KB" else "Celulares com páginas de 16 KB rodam em modo de compatibilidade ou recusam: ${r.unaligned.joinToString { it.name }.take(160)}")
         }
-        if (r.debuggable || r.testOnly) Line("Build", listOfNotNull("Depurável".takeIf { r.debuggable }, "Somente teste".takeIf { r.testOnly }).joinToString(" · "), warn = true,
+        if (r.debuggable || r.testOnly) Line("Compilação", listOfNotNull("Depurável".takeIf { r.debuggable }, "Somente teste".takeIf { r.testOnly }).joinToString(" · "), warn = true,
             sub = if (r.testOnly) "Precisa de Permitir builds de teste em Além da instalação" else null)
     }
     Section("Rastreadores") {
@@ -439,5 +439,5 @@ fun InsightChips(r: ApkInsights.Report, modifier: Modifier = Modifier) =
         r.pageReady?.let { InsightChip(if (it) Sym.CheckCircle else Sym.WarningAmber, if (it) "Pronto para 16 KB" else "Não pronto para 16 KB", warn = !it) }
         InsightChip(Sym.Radar, when (r.trackers.size) { 0 -> "Nenhum rastreador encontrado"; 1 -> "1 rastreador"; else -> "${r.trackers.size} rastreadores" }, warn = r.trackers.isNotEmpty())
         InsightChip(Sym.Policy, "${r.perms.size} permissões" + r.newPerms.size.takeIf { it > 0 }?.let { " · $it novas" }.orEmpty(), warn = r.newPerms.any { it.dangerous })
-        if (r.debuggable || r.debugSigned) InsightChip(Sym.BugReport, "Build de depuração", warn = true)
+        if (r.debuggable || r.debugSigned) InsightChip(Sym.BugReport, "Versão de depuração", warn = true)
     }

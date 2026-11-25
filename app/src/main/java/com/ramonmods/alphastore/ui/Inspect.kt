@@ -55,7 +55,7 @@ private val inspectClient by lazy { Net.client.newBuilder().callTimeout(0, TimeU
 
 private suspend fun fetchApk(url: String, into: File, progress: (Long, Long) -> Unit) = withContext(Dispatchers.IO) {
     inspectClient.newCall(Request.Builder().url(url).build()).execute().use { r ->
-        if (!r.isSuccessful) throw java.io.IOException("The server answered ${r.code}.")
+        if (!r.isSuccessful) throw java.io.IOException("O servidor respondeu ${r.code}.")
         val body = r.body; val total = body.contentLength()
         into.parentFile?.mkdirs()
         body.byteStream().use { inp ->
@@ -103,15 +103,15 @@ fun InspectSheet(vm: MainViewModel, app: AppItem, onDismiss: () -> Unit) = Alpha
             val file = when (from) {
                 InspectFrom.READY -> ready!!
                 InspectFrom.INSTALLED -> installedApk!!
-                InspectFrom.DOWNLOAD -> { fetchApk(url ?: throw java.io.IOException("This app has no direct APK link."), tmp) { g, t -> got = g; total = t }; phase = "read"; tmp }
+                InspectFrom.DOWNLOAD -> { fetchApk(url ?: throw java.io.IOException("Este app não tem um link direto de APK."), tmp) { g, t -> got = g; total = t }; phase = "read"; tmp }
             }
             val readFrom = withContext(Dispatchers.IO) { Bundles.parts(ctx, file).firstOrNull() ?: file }
-            val r = withContext(Dispatchers.IO) { ApkInsights.read(ctx, readFrom) } ?: throw java.io.IOException("The file isn't a package AlphaStore can read.")
+            val r = withContext(Dispatchers.IO) { ApkInsights.read(ctx, readFrom) } ?: throw java.io.IOException("O arquivo não é um pacote que a AlphaStore consiga ler.")
             if (from == InspectFrom.DOWNLOAD) { vm.stageInspected(app, file, url); staged = d.readyToInstall[app.id] ?: apkFileName(app, app.latestVersion, url); keep = true }
             else staged = d.readyToInstall[app.id]
             InspectCache.keep(app); InspectCache.reports[key] = r; phase = "done"; vm.haptic(H.SUCCESS)
         } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-        catch (e: Exception) { error = e.message ?: "Something went wrong."; phase = "failed"; vm.haptic(H.ERROR) }
+        catch (e: Exception) { error = e.message ?: "Algo deu errado."; phase = "failed"; vm.haptic(H.ERROR) }
         finally { if (!keep) withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) { tmp.delete() } }
     }
     SheetTitle("Inspecionar pacote", Sym.Science, when (from) {

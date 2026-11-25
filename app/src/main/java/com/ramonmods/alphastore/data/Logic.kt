@@ -120,18 +120,18 @@ fun githubAssetApiUrl(root: kotlinx.serialization.json.JsonElement, fileName: St
 /** Why an APK can't go over what is already on the phone: a different signer installed here, hidden in another profile, or built in. */
 enum class Clash { INSTALLED, HIDDEN, SYSTEM }
 
-private const val HIDDEN_SPOTS = "Secure Folder, a Work profile, Dual apps or Second space"
+private const val HIDDEN_SPOTS = "Pasta Segura, um Perfil de Trabalho, Apps Duplos ou Segundo Espaço"
 
 fun clashText(c: Clash, name: String): Pair<String, String> = when (c) {
-    Clash.INSTALLED -> "This won't install over your $name" to
-        "The $name on your phone came from somewhere else, like Play Store or a different mod. Android only lets an app be replaced by a copy from the same maker, and this one is from a different maker.\n\n" +
-        "Fix: uninstall your current $name, then install this one. Back up anything important first: uninstalling deletes the app's data."
-    Clash.HIDDEN -> "A hidden copy of $name is blocking this" to
-        "$name is gone from your home screen, but a copy is still on this phone: in $HIDDEN_SPOTS, or left behind by an uninstall that kept its data. That copy is from a different maker, so Android refuses this one.\n\n" +
-        "Fix: uninstall $name from there too (open Secure Folder or the other profile, then Settings, Apps, $name, Uninstall). Then try again."
-    Clash.SYSTEM -> "$name came with your phone" to
-        "$name is built into your phone, and Android only accepts updates for it from the phone maker. A modded copy can't replace it, even after removing it with Debloat.\n\n" +
-        "Fix: pick a version of the mod that installs as a separate app (often called non-root), or use root."
+    Clash.INSTALLED -> "Não é possível instalar sobre o $name original" to
+        "O $name no celular veio de outro lugar, como Play Store ou outro mod. O Android só aceita substituir apps pelo mesmo fabricante, e esta cópia é de outro.\n\n" +
+        "Solução: desinstale o $name atual primeiro e depois instale este. Faça backup do que for importante: desinstalar apaga os dados."
+    Clash.HIDDEN -> "Uma cópia oculta do $name está bloqueando" to
+        "O $name não está na tela, mas existe uma cópia no celular: em $HIDDEN_SPOTS, ou deixada por uma desinstalação que mantinha dados. Como é de outro maker, o Android recusa.\n\n" +
+        "Solução: desinstale o $name ali também (abre Pasta Segura ou o outro perfil, depois Configurações, Apps, $name, Desinstalar). Tente de novo."
+    Clash.SYSTEM -> "O $name veio com o celular" to
+        "O $name é original do celular; o Android só aceita atualizações dele pelo fabricante. Uma cópia modificada não o substitui.\n\n" +
+        "Solução: pegue uma versão do mod que instala como app separado, ou use root."
 }
 
 /** Turns pm, adb and PackageInstaller failures into a title and a plain explanation. */
@@ -139,23 +139,23 @@ fun installFailureText(msg: String?, name: String): Pair<String, String> {
     val m = msg.orEmpty(); val l = m.lowercase()
     fun has(vararg k: String) = k.any { it.lowercase() in l }
     return when {
-        has("UPDATE_INCOMPATIBLE", "signatures do not match", "SHARED_USER_INCOMPATIBLE", "INCONSISTENT_CERTIFICATES") -> "$name could not be installed" to
-            "Another copy of $name on this phone is from a different maker (like Play Store or another mod), and Android won't put this one over it.\n\n" +
-            "Fix: uninstall the current $name. Already did? A hidden copy may still be in $HIDDEN_SPOTS. Remove it there too, then try again."
-        has("VERSION_DOWNGRADE") -> "Your $name is newer" to "The $name on your phone is a newer version than this one, and Android won't go back to an older version. Uninstall it first if you really want this one."
-        has("INSUFFICIENT_STORAGE", "not enough space") -> "Phone storage is full" to "There isn't enough free space to install $name. Delete a few things and try again."
-        has("OLDER_SDK", "requires newer sdk") -> "Your Android is too old for this" to "This $name needs a newer Android version than your phone has."
-        has("NO_MATCHING_ABIS", "CPU_ABI") -> "Wrong build for your phone" to "This $name was built for a different phone processor. Pick another architecture on the app page."
-        has("DUPLICATE_PERMISSION", "CONFLICTING_PROVIDER", "DUPLICATE_PACKAGE") -> "Another app is in the way" to
-            "Another installed app already uses a part $name needs, usually a different version of the same mod. Uninstall that one first."
-        has("USER_RESTRICTED") -> "Your phone blocked the install" to
-            "A phone setting stopped it. On Xiaomi, turn on \"Install via USB\" in Developer options. Work or parental rules can block installs too."
-        has("VERIFICATION_FAILURE", "ABORTED", "VERIFICATION_TIMEOUT") -> "Android's security check stopped it" to "Play Protect or your phone's own scanner blocked $name. You can try again and choose Install anyway if it asks."
-        has("PARSE", "CORRUPT", "invalid", "INVALID_APK") -> "The file is damaged" to "The downloaded file isn't a working app. Delete it and download again."
-        has("stream closed", "stream error", "broken pipe") -> "The install connection dropped" to
-            "The APK for $name is still saved. The silent install closed before Android finished reading the file.\n\nFix: install it with the system installer. The saved file is used, so it is not downloaded again."
-        has("Shizuku") -> "Shizuku isn't ready" to "The silent install needs Shizuku running and allowed. Open Shizuku, start it, then try again."
-        else -> "$name could not be installed" to (Regex("INSTALL_[A-Z_]+").find(m)?.value?.let { "Android said: $it" } ?: m.ifBlank { "Android did not say why." }).take(200)
+        has("UPDATE_INCOMPATIBLE", "assinaturas do app não correspondem ao original", "SHARED_USER_INCOMPATIBLE", "INCONSISTENT_CERTIFICATES") -> "Não foi possível instalar o $name" to
+            "Já existe outra cópia do $name no celular de outro maker (Play Store ou outro mod) e o Android não deixa este instalar por cima.\n\n" +
+            "Solução: desinstale o $name atual. Já fez? Pode existir cópia oculta em $HIDDEN_SPOTS. Remova-a e tente de novo."
+        has("VERSION_DOWNGRADE") -> "O $name do celular é mais novo que este" to "O $name no celular é mais novo; o Android não aceita voltar para uma versão anterior. Desinstale o atual se realmente quiser o deste."
+        has("INSUFFICIENT_STORAGE", "espaço insuficiente") -> "O armazenamento está cheio" to "Não há espaço livre suficiente para o $name. Apague algumas coisas e tente de novo."
+        has("OLDER_SDK", "requires newer sdk") -> "Seu Android é muito antigo para isto" to "Este $name precisa de um Android mais novo."
+        has("NO_MATCHING_ABIS", "CPU_ABI") -> "Build inadequada ao celular" to "Este $name foi feito para outro processador."
+        has("DUPLICATE_PERMISSION", "CONFLICTING_PROVIDER", "DUPLICATE_PACKAGE") -> "Outro app bloqueia a instalação" to
+            "Outro app usa parte do $name que ele precisa, geralmente outra versão do mesmo mod. Desinstale-o primeiro."
+        has("USER_RESTRICTED") -> "Seu celular bloqueou a instalação" to
+            "Uma configuração do celular o bloqueou. Em Xiaomi, ative \"Instalar via USB\" nas opções de desenvolvedor; regras corporativas podem bloquear também."
+        has("VERIFICATION_FAILURE", "ABORTED", "VERIFICATION_TIMEOUT") -> "O verificador de segurança do Android parou" to "O Play Protect ou o scanner do celular bloqueou o $name. Pode tentar de novo e escolher Instalar mesmo assim."
+        has("PARSE", "CORRUPT", "invalid", "INVALID_APK") -> "O arquivo está corrompido" to "O arquivo baixado não funciona. Apague e baixe de novo."
+        has("stream closed", "erro de conexão", "broken pipe") -> "A conexão de instalação caiu" to
+            "O APK do $name ainda está salvo; a instalação em silêncio encerrou antes do Android ler o arquivo por inteiro.\n\nFix: install it with the system installer. The saved file is used, so it is not downloaded again."
+        has("Shizuku") -> "O Shizuku não está pronto" to "A instalação em silêncio precisa do Shizuku ligado. Abra e inicie o Shizuku e tente de novo."
+        else -> "Não foi possível instalar o $name" to (Regex("INSTALL_[A-Z_]+").find(m)?.value?.let { "Android said: $it" } ?: m.ifBlank { "O Android não disse o motivo." }).take(200)
     }
 }
 // endregion
@@ -281,16 +281,16 @@ val IMAGE_EXT = listOf(".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif"
 fun explainRejectedImageLink(url: String?): String? {
     val t = url?.trim().orEmpty()
     if (t.isEmpty()) return null
-    if (!Regex("^https?://", RegexOption.IGNORE_CASE).containsMatchIn(t)) return "Link must start with http:// or https://"
-    val u = runCatching { URI(t) }.getOrNull()?.takeIf { !it.host.isNullOrEmpty() } ?: return "Link is not a valid URL."
+    if (!Regex("^https?://", RegexOption.IGNORE_CASE).containsMatchIn(t)) return "O link deve começar com http:// ou https://"
+    val u = runCatching { URI(t) }.getOrNull()?.takeIf { !it.host.isNullOrEmpty() } ?: return "O link não é um URL válido."
     val host = u.host.lowercase(); val path = u.rawPath.orEmpty()
-    if (host.startsWith("private-user")) return "Private-user links are not accepted. Use a public image link."
+    if (host.startsWith("private-user")) return "Links privados não são aceitos; use um link público."
     val ok = IMAGE_EXT.any { path.lowercase().endsWith(it) } ||
         (host.endsWith("googleusercontent.com") && path.startsWith("/play-lh")) ||
         host == "raw.githubusercontent.com" || host == "camo.githubusercontent.com" ||
         ((host.endsWith("gitlab.com") || host.endsWith("gitlab.io")) && "/-/raw/" in path) ||
         (host == "codeberg.org" && "/raw/branch/" in path)
-    return if (ok) null else "Only image links are accepted (jpg/png/webp/gif/bmp/avif/svg, Play Store scraped links, or raw GitHub/GitLab/Codeberg/Camo links)."
+    return if (ok) null else "Apenas links de imagem são aceitos (jpg/png/webp/gif/bmp/avif/svg, links capturados da Play Store ou GitHub/GitLab/Codeberg/Camo)."
 }
 
 private val PLAY_SIZE = Regex("=[swh]\\d+"); private val PLAY_SIZE_TAIL = Regex("=[swh]\\d+[^/]*$")
@@ -318,12 +318,12 @@ fun generateSignature(data: Map<String, Any?>): String =
 data class ChangeField(val key: String, val label: String, val hint: String, val group: String, val kind: String)
 
 private val COMMON_FIELDS = listOf(
-    ChangeField("name", "App name", "Visible title", "Basics", "text"), ChangeField("author", "Developer or author", "Creator credit", "Basics", "text"),
+    ChangeField("name", "App name", "Visible title", "Basics", "text"), ChangeField("author", "Desenvolvedor ou autor", "Creator credit", "Basics", "text"),
     ChangeField("description", "Description", "Store description", "Basics", "textarea"), ChangeField("icon", "Icon URL", "Direct image URL", "Media", "url"),
-    ChangeField("screenshots", "Screenshot URLs", "One URL per line", "Media", "urls"), ChangeField("downloadUrl", "Download or source URL", "Working project page", "Source", "url"),
-    ChangeField("repoUrl", "Repository URL", "Main repository or website", "Source", "url"), ChangeField("githubRepo", "GitHub repository", "owner/repo or URL", "Source", "text"),
-    ChangeField("gitlabRepo", "GitLab project", "Group/project or URL", "Source", "text"), ChangeField("codebergRepo", "Codeberg repository", "owner/repo or URL", "Source", "text"),
-    ChangeField("officialSite", "Official website", "Product page", "Source", "url"), ChangeField("category", "Category", "Store category", "Catalog", "text"),
+    ChangeField("screenshots", "Screenshot URLs", "One URL per line", "Media", "urls"), ChangeField("downloadUrl", "Link de download ou origem", "Working project page", "Source", "url"),
+    ChangeField("repoUrl", "URL do repositório", "Repositório principal ou site", "Source", "url"), ChangeField("githubRepo", "Repositório do GitHub", "owner/repo or URL", "Source", "text"),
+    ChangeField("gitlabRepo", "GitLab project", "Grupo/projeto ou URL", "Source", "text"), ChangeField("codebergRepo", "Codeberg repository", "owner/repo or URL", "Source", "text"),
+    ChangeField("officialSite", "Official website", "Product page", "Source", "url"), ChangeField("category", "Category", "Categoria da loja", "Catalog", "text"),
 )
 fun changeFields(platform: String) = if (platform == Platform.ANDROID) COMMON_FIELDS + listOf(
     ChangeField("releaseKeyword", "Release asset keyword", "Unique APK filename word", "Android", "text"),
@@ -342,8 +342,8 @@ fun currentFieldValue(app: AppItem, key: String): String = when (key) {
 fun urlError(v: String): String {
     val t = v.trim()
     if (t.isEmpty()) return "Enter a valid URL."
-    val u = runCatching { URI(t) }.getOrNull()?.takeIf { it.scheme != null } ?: return "Use a valid http or https URL."
-    return if (u.scheme.lowercase() !in setOf("http", "https")) "Use an http or https URL." else if (u.host.isNullOrEmpty()) "Use a valid http or https URL." else ""
+    val u = runCatching { URI(t) }.getOrNull()?.takeIf { it.scheme != null } ?: return "Use um URL http ou https válido."
+    return if (u.scheme.lowercase() !in setOf("http", "https")) "Use um URL http ou https." else if (u.host.isNullOrEmpty()) "Use um URL http ou https válido." else ""
 }
 
 fun splitUrls(v: String) = v.trim().split(Regex("\n|,")).map { it.trim() }.filter { it.isNotEmpty() }
@@ -364,14 +364,14 @@ fun appUpdatePayloadJson(app: AppItem, field: String, value: Any): String {
 private fun jsonEsc(s: String) = s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
 
 fun appUpdateIssueUrl(app: AppItem, fieldLabel: String, current: String, suggested: String, reason: String, reference: String, payloadJson: String): String {
-    val title = "App Update - ${app.name} (${app.platform})"
+    val title = "Atualização do App - ${app.name} (${app.platform})"
     val body = listOf(
-        "### App Update Request", "", "- App ID: `${app.id}`", "- Platform: **${app.platform}**", "- Field: **$fieldLabel**", "- Current value: ${current.take(500)}", "",
+        "### Pedido de Atualização do App", "", "- App ID: `${app.id}`", "- Platform: **${app.platform}**", "- Field: **$fieldLabel**", "- Current value: ${current.take(500)}", "",
         "### Suggested value", "```text", suggested.trim().take(4000).ifEmpty { "(described in reason)" }, "```", "",
         "### Reason", reason.trim().ifEmpty { "No additional details provided." }, "",
         reference.trim().let { if (it.isNotEmpty()) "**Evidence:** $it" else "" }, "",
         "### Automation payload", "```json", payloadJson, "```", "",
-        "*Apply the `approved` label and run the App Update workflow to merge this change.*",
+        "*Aplique o rótulo `approved` e execute o workflow de Atualização do App para integrar a alteração.*",
     ).joinToString("\n")
     return "https://github.com/RamonMods/AlphaStore/issues/new?title=${enc(title)}&body=${enc(body)}"
 }
@@ -416,28 +416,28 @@ data class ForcedVm(
 
 private val FORCED_COPY = mapOf(
     "inactive" to listOf("Standby", "", "", "neutral"),
-    "checking" to listOf("Checking", "Checking for the latest AlphaStore build", "Reaching AlphaStore to confirm the newest version.", "progress"),
-    "downloading" to listOf("Downloading", "Downloading the latest AlphaStore build", "The update is being downloaded in the background.", "progress"),
-    "download_failed" to listOf("Retry required", "The download needs another try", "Check your connection and retry the download.", "warning"),
-    "ready_to_scan_or_install" to listOf("Ready", "The update is ready to install", "Review the next step, then install when you are ready.", "success"),
-    "byok_required" to listOf("Scan setup", "A VirusTotal API key is required to scan", "Add your API key in settings to enable scanning before install.", "warning"),
-    "scanning" to listOf("Scanning", "Scanning the update before install", "Verifying the APK with VirusTotal before installation.", "progress"),
-    "scan_complete" to listOf("Scan complete", "The update is ready for install", "The scan is complete and the build is ready to install.", "success"),
-    "installing" to listOf("Installing", "Android is taking over the install", "Continue with the system installer to finish the update.", "progress"),
-    "install_failed" to listOf("Install failed", "The install needs a manual fallback", "Save the APK to Downloads and install it manually from Files.", "warning"),
-    "export_ready" to listOf("Saved", "The APK is saved to your device", "Open the saved APK from Files to continue installation.", "success"),
-    "installed" to listOf("Complete", "AlphaStore is up to date", "Reopen AlphaStore to continue with the new version.", "success"),
+    "checking" to listOf("Checking", "Buscando a versão mais recente da AlphaStore", "Entrando em contato com a AlphaStore para confirmar a nova versão.", "progress"),
+    "downloading" to listOf("Downloading", "Baixando a versão mais recente da AlphaStore", "A atualização está sendo baixada em segundo plano.", "progress"),
+    "download_failed" to listOf("Nova tentativa necessária", "O download precisa de outra tentativa", "Verifique sua conexão e tente o download de novo.", "warning"),
+    "ready_to_scan_or_install" to listOf("Ready", "A atualização está pronta para instalar", "Revise o passo a seguir e instale quando quiser.", "success"),
+    "byok_required" to listOf("Configuração da verificação", "Chave da API do VirusTotal é necessária para verificar", "Adicione sua chave nas configurações para verificar antes de instalar.", "warning"),
+    "scanning" to listOf("Scanning", "Verificando a atualização antes de instalar", "Verificando o APK com o VirusTotal antes de instalar.", "progress"),
+    "scan_complete" to listOf("Verificação concluída", "A atualização está pronta para instalar", "A verificação acabou, a versão está pronta.", "success"),
+    "installing" to listOf("Installing", "O Android está tomando a instalação", "Continue com o instalador do sistema para concluir.", "progress"),
+    "install_failed" to listOf("Falha na instalação", "A instalação precisa de um recurso manual", "Salve o APK em Downloads e instale manualmente pelo app Arquivos.", "warning"),
+    "export_ready" to listOf("Saved", "O APK está salvo no dispositivo", "Abra o APK salvo no Arquivos para continuar.", "success"),
+    "installed" to listOf("Complete", "A AlphaStore está atualizada", "Reabra a AlphaStore para usar a nova versão.", "success"),
 )
 
 fun forcedVm(status: String, errorText: String?, statusText: String?, canScan: Boolean, canInstall: Boolean, exported: Boolean, exportPath: String?, scanProgress: Float, stats: VtStats?): ForcedVm {
     val c = FORCED_COPY[status] ?: FORCED_COPY.getValue("inactive")
     val a = buildList {
-        if (status == "download_failed") add(ForcedAction("retry", "Retry download", "primary"))
-        if (status == "byok_required") add(ForcedAction("install", "Skip scan & install", "secondary"))
-        if (status == "ready_to_scan_or_install" && canScan) add(ForcedAction("scan", "Scan before install", "secondary"))
-        if (status == "scan_complete" && stats != null) add(ForcedAction("open-report", "Open VirusTotal report", "secondary"))
-        if (status in setOf("ready_to_scan_or_install", "scan_complete", "export_ready") && canInstall) add(ForcedAction("install", "Install now", "primary"))
-        if (status == "install_failed") add(if (exported) ForcedAction("export", "Saved to downloads", "outline", false) else ForcedAction("export", "Save APK to downloads", "outline"))
+        if (status == "download_failed") add(ForcedAction("retry", "Repetir download", "primary"))
+        if (status == "byok_required") add(ForcedAction("install", "Pular verificação e instalar", "secondary"))
+        if (status == "ready_to_scan_or_install" && canScan) add(ForcedAction("scan", "Verificar antes de instalar", "secondary"))
+        if (status == "scan_complete" && stats != null) add(ForcedAction("open-report", "Abrir relatório do VirusTotal", "secondary"))
+        if (status in setOf("ready_to_scan_or_install", "scan_complete", "export_ready") && canInstall) add(ForcedAction("install", "Instalar agora", "primary"))
+        if (status == "install_failed") add(if (exported) ForcedAction("export", "Saved to downloads", "outline", false) else ForcedAction("export", "Salvar APK em Downloads", "outline"))
     }
     return ForcedVm(
         c[0], c[1], errorText?.ifEmpty { null } ?: statusText?.ifEmpty { null } ?: c[2], c[3], a,
@@ -461,8 +461,8 @@ data class MyAppRow(
         isInstalledNow && hasSavedApk -> "delete"; libraryStatus == "downloaded" && hasSavedApk -> "install"; else -> "view"
     }
     val statusLabel get() = when (status) {
-        "downloading" -> "${Math.round(progress)}%"; "ready" -> "Ready to install"; "update" -> "Update available"
-        "installed" -> if (isInstalledNow) "Installed v$installedVersion" else "Installed previously"
+        "downloading" -> "${Math.round(progress)}%"; "ready" -> "Pronto para instalar"; "update" -> "Atualização disponível"
+        "installed" -> if (isInstalledNow) "Instalado v$installedVersion" else "Instalado anteriormente"
         else -> if (hasSavedApk) "APK saved" else "Downloaded"
     }
     val versionDetail get() = when {
@@ -496,10 +496,10 @@ fun MyAppRow.matchesQuery(q: String) = q.isBlank() || q.trim().lowercase().let {
 
 // region modern storefront helpers
 fun modernSortTitle(sort: SortOption) = when (sort) {
-    SortOption.HOME -> "Home Page" to "More Picks For You"; SortOption.OLDEST -> "Oldest First" to "More Classics"
-    SortOption.NAME_ASC -> "A to Z" to "More A to Z"; SortOption.NAME_DESC -> "Z to A" to "More Z to A"
-    SortOption.SIZE_ASC -> "Smallest Footprint" to "More Lightweight Picks"; SortOption.SIZE_DESC -> "Largest Packages" to "More Heavyweights"
-    else -> "Recently Added" to "More Fresh Picks"
+    SortOption.HOME -> "Início" to "Mais Escolhas Para Você"; SortOption.OLDEST -> "Oldest First" to "Mais Clássicos"
+    SortOption.NAME_ASC -> "A to Z" to "Mais A a Z"; SortOption.NAME_DESC -> "Z to A" to "Mais Z a A"
+    SortOption.SIZE_ASC -> "Smallest Footprint" to "Mais Leves"; SortOption.SIZE_DESC -> "Largest Packages" to "Mais Pesados"
+    else -> "Adicionados Recentemente" to "Mais Escolhas Novas"
 }
 
 fun sortedModernCollections(apps: List<AppItem>, sort: SortOption, showAll: Boolean = false): List<StoreCollection> {
@@ -518,7 +518,7 @@ fun displaySort(layout: String, t: TabViewState) = when {
     else -> if (t.sort == SortOption.HOME) SortOption.NEWEST else t.sort
 }
 
-fun updatesCollection(apps: List<AppItem>) = if (apps.isEmpty()) null else StoreCollection("updates-available", "Updates Available", CollectionType.SWIMLANE, apps = apps.take(12), totalAppCount = apps.size)
+fun updatesCollection(apps: List<AppItem>) = if (apps.isEmpty()) null else StoreCollection("updates-available", "Atualizações Disponíveis", CollectionType.SWIMLANE, apps = apps.take(12), totalAppCount = apps.size)
 
 fun injectAfterHero(cols: List<StoreCollection>, inj: StoreCollection?): List<StoreCollection> {
     inj ?: return cols
@@ -800,7 +800,7 @@ fun cleanNotes(md: String): String {
 
 // region category guess
 /** The catalog's own categories, the ones a submission can pick. */
-val SUBMIT_CATEGORIES = listOf("Utility", "Media", "Productivity", "Music", "Customization", "Privacy", "Social", "Development", "Reading", "Games", "Anime", "Health", "Education", "Browsers")
+val SUBMIT_CATEGORIES = listOf("Utilidades", "Mídia", "Produtividade", "Música", "Personalização", "Privacidade", "Social", "Desenvolvimento", "Leitura", "Jogos", "Anime", "Saúde", "Educação", "Navegadores")
 
 private val STOP = ("the and for with your you that this app apps android from are can all not but has have its into more one use using also any via based open source free " +
     "simple fast lightweight client new best easy made support supports").split(' ').toSet()

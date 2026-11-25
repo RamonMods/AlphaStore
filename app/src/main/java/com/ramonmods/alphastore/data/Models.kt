@@ -15,8 +15,8 @@ object Device { @Volatile var isTv = false; @Volatile var lowEnd = false }
 fun AppItem.installsHere() = platform == Platform.ANDROID || (platform == Platform.TV && Device.isTv)
 
 enum class SortOption(val label: String) {
-    HOME("Home Page"), NEWEST("Recently Added"), OLDEST("Oldest Added"), NAME_ASC("Name (A-Z)"),
-    NAME_DESC("Name (Z-A)"), SIZE_ASC("Size (Smallest)"), SIZE_DESC("Size (Largest)")
+    HOME("Início"), NEWEST("Mais Recentes"), OLDEST("Mais Antigos"), NAME_ASC("Nome (A-Z)"),
+    NAME_DESC("Nome (Z-A)"), SIZE_ASC("Tamanho (Menor)"), SIZE_DESC("Tamanho (Maior)")
 }
 
 enum class Tab(val platform: String?) { ANDROID(Platform.ANDROID), PC(Platform.PC), TV(Platform.TV), ORBIT(null), MYAPPS(null), ABOUT(null), UPDATES(null) }
@@ -30,7 +30,7 @@ val STREAMS = listOf("Stable", "Beta", "Alpha", "Nightly")
 
 @Serializable data class AppItem(
     val id: String = "",
-    val name: String = "Unknown App",
+    val name: String = "App Desconhecido",
     val description: String = "",
     val icon: String = "",
     val version: String = "Latest",
@@ -106,7 +106,7 @@ data class StoreCollection(
 )
 
 object Defaults {
-    const val CACHE_VERSION = "v1_6"
+    const val CACHE_VERSION = "v1_7"
     const val NETWORK_TIMEOUT_MS = 8000L
     const val RELEASES_API = "https://api.github.com/repos/RamonMods/AlphaStore/releases?per_page=8"
     const val MIRROR_JSON = "https://raw.githubusercontent.com/RamonMods/AlphaStore/data/mirror.json"
@@ -124,7 +124,7 @@ object Defaults {
     const val MICROG_INFO_URL = "https://github.com/microg/GmsCore/wiki"
     val DEV_SOCIALS = SocialLinks("https://github.com/RamonMods", "https://github.com/RamonMods", "https://github.com/RamonMods/AlphaStore/discussions", "https://pixgg.com/ramon")
     val DONATION = DonationConfig("https://pixgg.com/ramon", "contato@ramonmods.com", "paypal.me/RamonMods")
-    val DEV_PROFILE = DevProfile("RamonMods", "https://i.pinimg.com/originals/12/79/48/127948a3253396796874286570740594.jpg", "Building the open web, one commit at a time. No ads, no tracking, just code.")
+    val DEV_PROFILE = DevProfile("RamonMods", "https://i.pinimg.com/originals/12/79/48/127948a3253396796874286570740594.jpg", "A AlphaStore é o futuro, um commit de cada vez. Sem anúncios, sem rastreamento, só código.")
     const val SUPPORT_EMAIL = "contato@ramonmods.com"
     const val EASTER_EGG = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     const val SELF_PACKAGE = "com.ramonmods.alphastore"
@@ -137,14 +137,14 @@ object Defaults {
     )
     val PTR_CHARACTERS = listOf("cat", "dog", "pokeball", "shield", "owl", "robot", "ghost", "kitty", "bunny", "batman")
     val FAQS = listOf(
-        FAQItem("Why do scanner apps say AlphaStore has trackers?", "Scanner apps like AppManager flag the Unity Ads SDK inside AlphaStore. That SDK exists for exactly one feature: the optional ad-watching in the About tab (Fuel the Code), where watching ads supports me and earns you XP and unlocks badges. No analytics, no data mining, no data selling. The app is open source so anyone can verify it, and ads are 100% optional with nothing running in the background.", "fa-magnifying-glass"),
-        FAQItem("Is AlphaStore safe?", "Absolutely. AlphaStore is completely open-source. This means our code is public on GitHub for anyone to audit. We believe in transparency: no hidden trackers, no data mining, just a clean gateway to apps.", "fa-shield-cat"),
-        FAQItem("Are apps on AlphaStore safe?", "Yes. I personally review and mod them using tools available on their official repositories to ensure they are safe, functional, and privacy-respecting before they land here.", "fa-check-double"),
-        FAQItem("Are ReVanced builds safe?", "Yes. These builds are automated via GitHub Actions bots, not manually patched. They use the official ReVanced CLI and patches on APKs sourced from APKMirror, Uptodown, and APKPure. The process runs daily at 6 AM. The entire build pipeline is transparent and open-source: https://github.com/RamonMods/Revanced-AutoBuilds", "fa-robot"),
-        FAQItem("Installation failed?", "If you see 'App not installed' or 'Package conflicts', it's likely a signature mismatch. You cannot install a modded app over the original Play Store version or a different mod. Uninstall the existing app first, then install the one from AlphaStore.", "fa-file-signature"),
-        FAQItem("Download not working?", "Don't panic! Just head to the app's detail page and click the 'Report' icon (⚠️) in the top right corner. It will pre-fill an email so I can fix it ASAP.", "fa-bug"),
-        FAQItem("Will there be more apps?", "Yes, if there'll be more interesting apps to add on. As long as I find open-source or useful tools that deserve a spotlight, the library will keep growing.", "fa-layer-group"),
-        FAQItem("How can I support?", "By donation through ko-fi. Code fuels the store, but coffee fuels the dev! You can find the link in the socials section.", "fa-heart"),
-        FAQItem("Is there any hidden easter egg?", "Where the Architect stares, the secret sleeps.\n\nCount the legs of a spider. Count the vertices of a cube.\n\nStrike the Visage that many times.\n\nThe Golden Truth awaits those who know the rules... and so do I.", "fa-user-secret"),
+        FAQItem("Por que apps de verificação dizem que a AlphaStore tem rastreadores?", "Apps de verificação como o AppManager sinalizam o SDK do Unity Ads dentro da AlphaStore. Esse SDK existe por exatamente um motivo: os anúncios opcionais da aba Sobre (Missions), onde assistir aos anúncios apoia o projeto e rende XP e insígnias. Não há análise de dados, mineração ou venda de dados. O app é open source, então qualquer pessoa pode verificar, e os anúncios são 100% opcionais, sem nada rodando em segundo plano.", "fa-magnifying-glass"),
+        FAQItem("A AlphaStore é segura?", "Com certeza. A AlphaStore é totalmente open source. O código é público no GitHub para qualquer pessoa auditar. Acreditamos em transparência: sem rastreadores escondidos, sem mineração de dados, só uma porta de entrada limpa para os apps.", "fa-shield-cat"),
+        FAQItem("Os apps da AlphaStore são seguros?", "Sim. Eu reviso e modifico pessoalmente cada app usando ferramentas disponíveis nos repositórios oficiais, para garantir que sejam seguros, funcionais e respeitem a privacidade antes de entrar na loja.", "fa-check-double"),
+        FAQItem("Os builds do ReVanced são seguros?", "Sim. Esses builds são automatizados por bots do GitHub Actions, não são patchados manualmente. Eles usam o CLI e os patches oficiais do ReVanced em APKs obtidos do APKMirror, Uptodown e APKPure. O processo roda todos os dias às 6h. Toda a pipeline de build é transparente e open source: https://github.com/RamonMods/Revanced-AutoBuilds", "fa-robot"),
+        FAQItem("A instalação falhou?", "Se aparecer \"App não instalado\" ou \"Conflito de pacote\", provavelmente é incompatibilidade de assinatura. Não dá para instalar um app modificado por cima da versão original da Play Store ou de outro mod. Desinstale o app existente primeiro e depois instale o da AlphaStore.", "fa-file-signature"),
+        FAQItem("O download não funciona?", "Não entre em pânico! Vá à página do app e toque no ícone de relatar (⚠️) no canto superior direito. Vai abrir um e-mail já preenchido para eu corrigir o mais rápido possível.", "fa-bug"),
+        FAQItem("Vão ter mais apps?", "Sim, sempre que houver apps interessantes para adicionar. Enquanto eu encontrar ferramentas open source ou úteis que mereçam destaque, a biblioteca vai continuar crescendo.", "fa-layer-group"),
+        FAQItem("Como posso apoiar?", "Com uma doação via Pix. Código move a loja, mas café move o desenvolvedor! O link está na seção de redes sociais.", "fa-heart"),
+        FAQItem("Tem algum easter egg escondido?", "Onde o Arquiteto olha, o segredo dorme.\n\nConte as pernas de uma aranha. Conte os vértices de um cubo.\n\nToque na Visagem essa quantidade de vezes.\n\nA Verdade Dourada espera por quem conhece as regras... e eu também.", "fa-user-secret"),
     )
 }

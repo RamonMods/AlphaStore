@@ -193,7 +193,7 @@ fun AiScreen(vm: MainViewModel, onClose: () -> Unit) {
     val last = ai.messages.lastOrNull()?.text
     LaunchedEffect(ai.messages.size, last) { if (ai.messages.isNotEmpty()) list.animateScrollToItem(ai.messages.lastIndex) }
     fun send(t: String) { if (ready) { ai.send(vm, t); input = "" } else settings = true }
-    val label = when { p == AiProvider.LOCAL -> LocalLlm.model(s.aiLocalModel)?.name ?: "On device"; else -> "${p.label} · ${s.aiModels[p.id].orEmpty().ifBlank { p.model }}" }
+    val label = when { p == AiProvider.LOCAL -> LocalLlm.model(s.aiLocalModel)?.name ?: "No dispositivo"; else -> "${p.label} · ${s.aiModels[p.id].orEmpty().ifBlank { p.model }}" }
     Column(Modifier.fillMaxSize().background(cs.surface).windowInsetsPadding(AiTop).windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars).only(WindowInsetsSides.Bottom))) {
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             AiOrb(40.dp, ai.busy); Spacer(Modifier.width(12.dp))

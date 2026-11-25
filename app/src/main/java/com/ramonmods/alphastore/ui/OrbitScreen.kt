@@ -282,7 +282,7 @@ private fun OrbitBar(sources: List<OrbitSource>, tags: List<String>, pickedSourc
             FilledTonalIconButton({ vm.haptic(H.SELECTION); onSources() }, Modifier.size(40.dp)) { Icon(Sym.Info, "Fontes que a AlphaStore pode ler") }
         }
     }
-    if (box == "src") PickBox("Sources", sources.map { it.label to sourceIcon(it) }, pickedSources, { box = "" }, { onSourcesPicked(it); box = "" })
+    if (box == "src") PickBox("Fontes", sources.map { it.label to sourceIcon(it) }, pickedSources, { box = "" }, { onSourcesPicked(it); box = "" })
     if (box == "tag") PickBox("Tags", tags.map { it to Sym.Sell }, pickedTags, { box = "" }, { onTagsPicked(it); box = "" })
 }
 

@@ -170,8 +170,8 @@ private val STORY = listOf(
     Card(23, "Segundo Selo", "Você quebrou o Selo da Ganância. Tudo continua gratuito.", Sym.Paid, Yellow),
     Card(24, "Preparação Final", "Poções tomadas. Armadura polida. É agora.", Sym.Science, Purple),
     Card(25, "ENTROPIA DERROTADA!", "CHEFE FINAL: Você salvou todo o universo digital! Insígnia Cosmic Guardian desbloqueada!", Sym.RocketLaunch, Fuchsia),
-    // Capítulo 2 · The Forkening: uma estrada longa, com marcos mais espaçados quanto mais fundo você vai
-    Card(26, "The Forkening", "O último suspiro da Entropia dividiu a AlphaStore em mil forks rebeldes. Cada um jura que é a verdadeira AlphaStore.", Sym.AccountTree, Indigo),
+    // Capítulo 2 · A Bifurcação: uma estrada longa, com marcos mais espaçados quanto mais fundo você vai
+    Card(26, "A Bifurcação", "O último suspiro da Entropia dividiu a AlphaStore em mil forks rebeldes. Cada um jura que é a verdadeira AlphaStore.", Sym.AccountTree, Indigo),
     Card(27, "Batedor de Forks", "Um fork minúsculo chamado alphastore-final-FINAL-v2 tentou te morder. Você deu uma estrela por pena.", Sym.Star, Yellow),
     Card(28, "Labirinto de Branches", "Todo branch parece main. Nenhum deles é main. Você deixa um rastro de hashes de commit.", Sym.Explore, Green),
     Card(30, "Oráculo do README", "Um README antigo diz: \"Instalação: é só funcionar.\" Mentira. Você nunca mais vai confiar em um README.", Sym.MenuBook, Blue),
@@ -349,7 +349,7 @@ fun AdDonationSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                         MorphBlob(listOf(MaterialShapes.Circle, MaterialShapes.Cookie12Sided), k, 128.dp, tonal(Indigo).first) {
                             Icon(Sym.AccountTree, null, Modifier.size(56.dp), tint = tonal(Indigo).second)
                         }
-                        Lead("The Forkening", "A Entropia se foi, mas seu último suspiro dividiu a AlphaStore em mil forks rebeldes. Três novos chefes guardam três novas insígnias. Esta estrada é longa, piloto. Só os teimosos chegam ao trono.",
+                        Lead("A Bifurcação", "A Entropia se foi, mas seu último suspiro dividiu a AlphaStore em mil forks rebeldes. Três novos chefes guardam três novas insígnias. Esta estrada é longa, piloto. Só os teimosos chegam ao trono.",
                             "Capítulo 2 · Nova missão", Fuchsia, center = true)
                         NextBoss(streak)
                         CtaButton("Começar Capítulo 2", ::play, icon = Sym.Swords)
@@ -420,7 +420,7 @@ private val AVATAR_CHOICES = CHARACTERS
 private val DINO_BADGES = listOf(200L to "Dino Novato", 600L to "Dino Mestre", 1500L to "Dino Lenda")
 /** Archive sections in display order; quest badges follow the boss order so the grind reads left to right. */
 private val BADGE_GROUPS = listOf(
-    "Fuel the Code" to QUEST_BOSSES.map { it.badge },
+    "Fuel do Código" to QUEST_BOSSES.map { it.badge },
     "Dino Run" to DINO_BADGES.map { it.second },
     "Patentes de piloto" to TIER_BADGES.map { it.second },
     "Coleções" to COSMETIC_BADGES.map { it.first },
@@ -439,11 +439,11 @@ private fun badgeProgress(id: String, s: Settings): Pair<Long, Long>? =
         ?: DINO_BADGES.firstOrNull { it.second == id }?.let { s.dinoHighScore to it.first }
         ?: COSMETIC_BADGES.firstOrNull { it.first == id }?.second?.let { set -> set.sumOf { it.progress(s) }.toLong() to set.sumOf { it.ads }.toLong() }
 
-private fun badgeHint(id: String) = QUEST_BOSSES.firstOrNull { it.badge == id }?.let { "Derrote ${it.name} no Fuel the Code. Requer ${it.lvl} anúncios." }
+private fun badgeHint(id: String) = QUEST_BOSSES.firstOrNull { it.badge == id }?.let { "Derrote ${it.name} no Fuel do Código. Requer ${it.lvl} anúncios." }
     ?: DINO_BADGES.firstOrNull { it.second == id }?.let { "Faça ${it.first} pontos em uma única partida do Dino Run." }
-    ?: when (id) { "Icon Collector" -> "Desbloqueie os ícones Neon e Gold do app com anúncios do Fuel the Code."; "Dock Master" -> "Desbloqueie os docks Vibrant e Shape shift com anúncios do Fuel the Code."; else -> null }
+    ?: when (id) { "Icon Collector" -> "Desbloqueie os ícones Neon e Gold do app com anúncios do Fuel do Código."; "Dock Master" -> "Desbloqueie os docks Vibrant e Shape shift com anúncios do Fuel do Código."; else -> null }
     ?: TIER_BADGES.firstOrNull { it.second == id }?.let { "Alcance o nível ${it.first}. Cada anúncio, app e envio rende XP." }
-    ?: when (id) { "Legend" -> "Conclua o Capítulo 1 do Fuel the Code."; "Dev Mode" -> "Alguns números de versão adoram ser tocados. Muitas vezes."; else -> "" }
+    ?: when (id) { "Legend" -> "Conclua o Capítulo 1 do Fuel do Código."; "Dev Mode" -> "Alguns números de versão adoram ser tocados. Muitas vezes."; else -> "" }
 
 
 @Composable

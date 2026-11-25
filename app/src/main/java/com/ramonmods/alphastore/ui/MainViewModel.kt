@@ -67,9 +67,9 @@ enum class Overlay { SETTINGS, RELEASE_NOTES, FAQ, SUBMISSION, AD_DONATION, CUST
 val FORCED_GUARD = setOf("scanning", "scan_complete", "installing", "install_failed", "export_ready", "byok_required", "ready_to_scan_or_install")
 val FORCED_TEST_PROGRESS = mapOf("checking" to 8, "downloading" to 64, "download_failed" to 32, "scanning" to 72, "installing" to 96)
 val FORCED_TEST_TEXT = mapOf(
-    "checking" to "Checking AlphaStore for the newest build.", "downloading" to "Downloading AlphaStore_9.9.9.apk from the update source.",
-    "download_failed" to "Download interrupted. Retry the transfer or save it later.", "ready_to_scan_or_install" to "The update package is ready. Choose the next step.",
-    "byok_required" to "A VirusTotal API key is required before you can scan.", "scanning" to "Scanning the APK before install.",
+    "checking" to "Buscando a versão mais recente da AlphaStore.", "downloading" to "Baixando o AlphaStore_9.9.9.apk da fonte de atualização.",
+    "download_failed" to "Download interrompido. Tente de novo a transferência ou salve depois.", "ready_to_scan_or_install" to "O pacote de atualização está pronto. Escolha o próximo passo.",
+    "byok_required" to "Uma chave da API do VirusTotal é necessária para verificar.", "scanning" to "Verificando o APK antes de instalar.",
 )
 
 /** Process-wide persisted stores (zustand persist equivalents). */
@@ -172,7 +172,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (!s.webMigrated) WebMigration.read(ctx, ::migrateWeb)
         // 2.2.5: the dock starts compact. A dock still on the old 100% default moves over once; a size picked after that stays put.
         if (flag("dock") == null) set { st -> st.copy(bottomNavScale = if (st.bottomNavScale == 1f) .85f else st.bottomNavScale, seenFlags = st.seenFlags + "dock=compact") }
-        // 2.2.5: "About this app" previews start off; rows that never had the switch touched follow the new default once
+        // 2.2.5: "Sobre este app" previews start off; rows that never had the switch touched follow the new default once
         if (flag("about") == null) set { st -> st.copy(showAppAbout = false, seenFlags = st.seenFlags + "about=off") }
         // Tier badges follow the shared level, whichever XP source pushed it over
         viewModelScope.launch {
@@ -200,7 +200,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             combine(catalog, data.map { it.tabs }.distinctUntilChanged(), settings.map { it.storeLayout }.distinctUntilChanged(), ::Triple).collectLatest { (all, tabs, layout) ->
-                // An empty catalog is "not loaded yet": leaving the map empty keeps tabReady false, so tabs show the skeleton instead of an empty state.
+                // An empty catalog is "ainda não carregado": leaving the map empty keeps tabReady false, so tabs show the skeleton instead of an empty state.
                 if (all.isEmpty()) { visibleBy = emptyMap(); return@collectLatest }
                 if (tabs.values.any { it.query.isNotEmpty() }) delay(150)
                 visibleBy = withContext(Dispatchers.Default) {
@@ -254,7 +254,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun installToast(app: AppItem, file: String) {
         // The app page already shows Install. A snackbar there covers that button.
         if (selectedApp?.id == app.id) return
-        toast("${app.name} is ready to install", 6000, "Install") { installFile(app, file) }
+        toast("${app.name} está pronto para instalar", 6000, "Install") { installFile(app, file) }
     }
     // endregion
 
@@ -305,7 +305,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** The popup on the step that fits the phone: Secure me while verification is on, Revert once it is off. */
     fun openVerifier() {
         refreshVerifier()
-        if (verifierState == Verifier.State.ABSENT && flag("verifier") != "secured") { toast("This phone has no developer verification to turn off"); return }
+        if (verifierState == Verifier.State.ABSENT && flag("verifier") != "secured") { toast("Este celular não tem verificação de desenvolvedor para desativar"); return }
         verifierFake = null; verifierError = ""; verifierReverting = false
         verifierStep = if (verifierState == Verifier.State.ACTIVE) "intro" else "protected"; verifierPrompt = true
     }
@@ -354,11 +354,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         verifierFake?.let { f ->
             delay(2200)
             if (f == "done") { verifierStep = if (revert) "intro" else "protected"; haptic(H.SUCCESS) }
-            else { verifierError = "Android refused the change: Cannot disable a protected package. (Test run, nothing was changed.)"; verifierStep = "failed"; haptic(H.ERROR) }
+            else { verifierError = "Android recusou a alteração: não é possível desativar um pacote protegido. (Teste, nada foi alterado.)"; verifierStep = "failed"; haptic(H.ERROR) }
             return@launch
         }
         val sh = try { verifierShell() } catch (e: Exception) {
-            verifierError = (e as? NativeError)?.message ?: e.message ?: "Wireless debugging didn't answer."; verifierStep = "failed"; haptic(H.ERROR); return@launch
+            verifierError = (e as? NativeError)?.message ?: e.message ?: "O depuração sem fio não respondeu."; verifierStep = "failed"; haptic(H.ERROR); return@launch
         } ?: run { verifierStep = "setup"; haptic(H.LIGHT); return@launch }
         val log = StringBuilder()
         suspend fun run(cmd: String) = runCatching { sh(cmd) }.getOrElse { it.message.orEmpty() }.also { log.appendLine(it) }
@@ -379,13 +379,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         refreshVerifier()
         val ok = if (revert) verifierState == Verifier.State.ACTIVE else verifierState != Verifier.State.ACTIVE
         if (ok) {
-            if (revert) { set { st -> st.copy(seenFlags = st.seenFlags.filterNot { it.startsWith("verifierPrev=") }.toSet()) }; toast("Developer verification is back on") }
+            if (revert) { set { st -> st.copy(seenFlags = st.seenFlags.filterNot { it.startsWith("verifierPrev=") }.toSet()) }; toast("Verificação de desenvolvedor está ativa de novo") }
             setFlag("verifier", if (revert) "seen" else "secured")
             verifierStep = if (revert) "intro" else "protected"; haptic(H.SUCCESS)
         } else {
             val why = Verifier.refusal(log.toString())
-            verifierError = (if (why != null) "Android refused the change: $why." else if (revert) "Android kept developer verification off." else "This phone kept developer verification on.") +
-                if (!revert && !s.rootMode) " Root can get through where wireless debugging and Shizuku can't." else ""
+            verifierError = (if (why != null) "Android recusou a alteração: $why." else if (revert) "Android kept developer verification off." else "O celular manteve a verificação de desenvolvedor ativada.") +
+                if (!revert && !s.rootMode) " Root pode passar onde depuração sem fio e Shizuku não podem." else ""
             verifierStep = "failed"; haptic(H.ERROR)
         }
     }
@@ -443,7 +443,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (st.cloudBackupUri.isEmpty() || !force && (every == null || now() - st.lastCloudBackup < every)) return@launch
         runCatching { withContext(Dispatchers.IO) { ctx.contentResolver.openOutputStream(st.cloudBackupUri.toUri(), "wt")!!.use { it.write(identityExport(st, d.favorites, now()).toByteArray()) } } }
             .onSuccess { set { it.copy(lastCloudBackup = now()) }; if (force) { toast("Identity backed up"); haptic(H.SUCCESS) } }
-            .onFailure { if (force) error("Cloud backup failed. Pick the backup file again in Settings › Backup.") else if (!cloudWarned) { cloudWarned = true; queue { error("Cloud backup failed. Pick the backup file again in Settings › Backup.") } } }
+            .onFailure { if (force) error("Backup na nuvem falhou. Escolha o arquivo de backup de novo em Configurações › Backup.") else if (!cloudWarned) { cloudWarned = true; queue { error("Backup na nuvem falhou. Escolha o arquivo de backup de novo em Configurações › Backup.") } } }
     }
 
     /** Keeps a joined pilot's Hall of Fame entry current without the Fame Gate: at most every 2 days, and only after a level up, so the relay's free quota lasts. */
@@ -460,15 +460,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun adoptApps() = viewModelScope.launch {
         val owned = s.resolvedPackageNames.filterKeys { it in s.installedVersions }.values
         val foreign = withContext(Dispatchers.IO) { tracker.foreignInstalls(owned) }
-        if (foreign.isEmpty()) { toast("AlphaStore already updates every catalog app you have"); return@launch }
+        if (foreign.isEmpty()) { toast("A AlphaStore já atualiza todos os apps do catálogo que você tem"); return@launch }
         toast("Adopting ${foreign.size} apps...", 60_000)
         val failed = foreign.keys.count { runCatching { tracker.adopt(it) }.isFailure }
         haptic(if (failed == 0) H.SUCCESS else H.WARNING)
-        toast(if (failed == 0) "AlphaStore now updates ${foreign.size} more apps" else "Adopted ${foreign.size - failed}, $failed failed (signature or split mismatch)", 6000)
+        toast(if (failed == 0) "A AlphaStore agora atualiza mais ${foreign.size} apps" else "Adotou ${foreign.size - failed}, $failed com falha (assinatura ou desdobramento)", 6000)
     }
 
     fun trimCaches() = viewModelScope.launch {
-        runCatching { tracker.trimCaches() }.onSuccess { toast("App caches cleared"); haptic(H.SUCCESS) }.onFailure { error(it.message ?: "Trim failed") }
+        runCatching { tracker.trimCaches() }.onSuccess { toast("App caches cleared"); haptic(H.SUCCESS) }.onFailure { error(it.message ?: "Redução falhou") }
     }
     // endregion
 
@@ -499,7 +499,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             process(if (r.config == null && d.apps.isNotEmpty()) null else r.rawApps, r.mirror, r.stars)
             if (r.config != null) CatalogCache(d.apps, r.config, r.source).let { c -> launch(Dispatchers.IO) { runCatching { repo.saveCache(c) } } }
         } catch (e: Exception) {
-            if (d.apps.isEmpty()) { error("Failed to load apps"); clearConfigState(); if (st.devConfigEnabled) { devStatus = "error"; devError = e.message ?: "Failed to load developer config." }; haptic(H.ERROR) }
+            if (d.apps.isEmpty()) { error("Falha ao carregar apps"); clearConfigState(); if (st.devConfigEnabled) { devStatus = "error"; devError = e.message ?: "Falha ao carregar configuração de desenvolvedor." }; haptic(H.ERROR) }
             loading = false; refreshing = false
         }
     }
@@ -540,22 +540,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val cur = s.forcedStoreUpdate
         if (canResumeForcedUpdate(cur, STORE_VERSION, latest, c.minStoreVersion) && cur != null) {
             if (cur.downloadCompleted && Downloads.file(cur.downloadFileName)?.exists() != true) {
-                fStatus = "download_failed"; fError = "Previously downloaded file not found. Please retry."; return
+                fStatus = "download_failed"; fError = "Arquivo baixado anteriormente não encontrado. Tente de novo."; return
             }
             fStatus = if (cur.status == "export_ready") "export_ready".also { fExportPath = "" } else "ready_to_scan_or_install"
-            fText = "The AlphaStore update is already downloaded."; return
+            fText = "A atualização da AlphaStore já está baixada."; return
         }
         set { it.copy(forcedStoreUpdate = ForcedSnapshot(targetVersion = latest, downloadFileName = forcedStoreFileName(latest), status = "downloading", downloadCompleted = false, exported = false)) }
-        fStatus = "downloading"; fText = "Downloading the latest AlphaStore build..."; forcedDownload()
+        fStatus = "downloading"; fText = "Baixando a versão mais recente da AlphaStore..."; forcedDownload()
     }
 
     private fun forcedDownload() {
         forcedJob?.cancel()
         forcedJob = viewModelScope.launch {
             val name = s.forcedStoreUpdate?.downloadFileName ?: return@launch
-            if (forcedUrl.isEmpty()) { fStatus = "download_failed"; fError = "No download URL found for this update."; return@launch }
+            if (forcedUrl.isEmpty()) { fStatus = "download_failed"; fError = "Nenhum link de download encontrado para esta atualização."; return@launch }
             fError = ""; fProgress = 0
-            if (runCatching { Downloads.start(forcedUrl, name) }.isFailure) { fStatus = "download_failed"; fError = "Download failed. Check your connection and retry."; return@launch }
+            if (runCatching { Downloads.start(forcedUrl, name) }.isFailure) { fStatus = "download_failed"; fError = "Download falhou. Verifique sua conexão e tente de novo."; return@launch }
             while (true) {
                 delay(800)
                 val dl = Downloads.status(name); fProgress = dl.progress
@@ -563,8 +563,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 Downloads.forget(name)
                 if (dl.status == DlStatus.SUCCESSFUL) {
                     snap { it.copy(status = "ready_to_scan_or_install", downloadCompleted = true) }
-                    fStatus = "ready_to_scan_or_install"; fText = "Download complete."; fProgress = 100; haptic(H.SUCCESS)
-                } else { fStatus = "download_failed"; fError = "Download failed. Check your connection and retry."; haptic(H.ERROR) }
+                    fStatus = "ready_to_scan_or_install"; fText = "Download concluído."; fProgress = 100; haptic(H.SUCCESS)
+                } else { fStatus = "download_failed"; fError = "Download falhou. Verifique sua conexão e tente de novo."; haptic(H.ERROR) }
                 return@launch
             }
         }
@@ -578,13 +578,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun forcedRetryDownload() {
         fError = ""; fProgress = 0; fResult = null
         snap { it.copy(status = "downloading", downloadCompleted = false) }
-        fStatus = "downloading"; fText = "Retrying download..."; forcedDownload()
+        fStatus = "downloading"; fText = "Repetindo o download..."; forcedDownload()
     }
 
     fun forcedInstall() = viewModelScope.launch {
-        val sn = forcedSnapshot() ?: run { fError = "Update package metadata is missing. Retry the download, then install again."; return@launch }
+        val sn = forcedSnapshot() ?: run { fError = "Metadados do pacote de atualização estão faltando. Repita o download e instale de novo."; return@launch }
         fError = ""; fText = "Opening installer..."
-        if (!tracker.canRequestInstalls()) { fError = "Grant install permission, then tap Install Now again."; runCatching { ctx.startActivity(tracker.installSettingsIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }; return@launch }
+        if (!tracker.canRequestInstalls()) { fError = "Permita a instalação, depois toque Instalar Agora de novo."; runCatching { ctx.startActivity(tracker.installSettingsIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }; return@launch }
         fStatus = "installing"; snap { it.copy(status = "installing") }
         try {
             tracker.install(sn.downloadFileName, s.installerPreference, s.installerPackage)
@@ -592,7 +592,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             snap { it.copy(status = "installed") }; fStatus = "installed"; haptic(H.SUCCESS)
         } catch (e: Exception) {
             fStatus = "install_failed"; snap { it.copy(status = "install_failed") }
-            fError = if (e.message?.contains("CANCELED") == true) "Install cancelled. Save the APK to install it manually." else "Install failed. Save the APK to install it manually."
+            fError = if (e.message?.contains("CANCELED") == true) "Instalação cancelada. Salve o APK e instale manualmente." else "Falha na instalação. Salve o APK e instale manualmente."
             haptic(H.ERROR)
         }
     }
@@ -603,20 +603,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         try {
             fExportPath = tracker.exportFile(sn.downloadFileName)
             snap { it.copy(status = "install_failed", exported = true) }
-            fError = ""; fText = "Saved to your downloads folder."; haptic(H.SUCCESS)
-        } catch (e: Exception) { fError = e.message ?: "Export failed. Try again." }
+            fError = ""; fText = "Salvo na pasta de downloads."; haptic(H.SUCCESS)
+        } catch (e: Exception) { fError = e.message ?: "Exportação falhou. Tente de novo." }
     }
 
     fun forcedScan(key: String = s.virusTotalApiKey) {
-        if (key.isBlank()) { pendingScanAfterKey = true; fStatus = "byok_required"; fText = "Add your VirusTotal API key below, then scan the update."; return }
+        if (key.isBlank()) { pendingScanAfterKey = true; fStatus = "byok_required"; fText = "Adicione sua chave da API do VirusTotal abaixo, então verifique a atualização."; return }
         pendingScanAfterKey = false
         val sn = forcedSnapshot()
-        val target = if (sn?.downloadCompleted == true) ScanTarget(ScanTargetType.DOWNLOADED_APK, "Downloaded update", sn.downloadFileName) else ScanTarget(ScanTargetType.REMOTE_APK, "Update package", forcedUrl)
-        fStatus = "scanning"; fText = "Scanning the APK with VirusTotal."; fError = ""
+        val target = if (sn?.downloadCompleted == true) ScanTarget(ScanTargetType.DOWNLOADED_APK, "Atualização baixada", sn.downloadFileName) else ScanTarget(ScanTargetType.REMOTE_APK, "Pacote de atualização", forcedUrl)
+        fStatus = "scanning"; fText = "Verificando o APK com o VirusTotal."; fError = ""
         viewModelScope.launch {
             val r = forcedVt.start(target, key, ::hapticStr)
-            if (r != null) { fResult = r; fStatus = "scan_complete"; fText = "Scan complete. Install whenever you are ready."; snap { it.copy(status = "scan_complete") } }
-            else { fStatus = "ready_to_scan_or_install"; fError = forcedVt.error.ifEmpty { "Scan failed. Try again." } }
+            if (r != null) { fResult = r; fStatus = "scan_complete"; fText = "Verificação concluída. Instale quando quiser."; snap { it.copy(status = "scan_complete") } }
+            else { fStatus = "ready_to_scan_or_install"; fError = forcedVt.error.ifEmpty { "Verificação falhou. Tente de novo." } }
         }
     }
 
@@ -654,12 +654,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (s.directInstall && WirelessAdb.supported) WirelessAdb.warm(ctx)
         viewModelScope.launch {
             try {
-                if (TRACK_ONLY_TAG in app.tags) { if (!auto) toast("${app.name} is set to track only"); return@launch }
+                if (TRACK_ONLY_TAG in app.tags) { if (!auto) toast("${app.name} está configurado para rastrear só"); return@launch }
                 val meta = downloadVersionMeta(app, url, s.streamOf(app.id))
                 if (!auto && url == null && app.id !in d.readyToInstall) {
                     val local = s.installedVersions[app.id]
                     if (!local.isNullOrEmpty() && !hasAvailableUpdate(app, local, s.streamOf(app.id), s.installedBuilds[app.id])) {
-                        toast("${app.name} is already on this phone"); return@launch
+                        toast("${app.name} já está neste celular"); return@launch
                     }
                 }
                 set { it.copy(appStreams = it.appStreams + (app.id to meta.second)) }
@@ -675,12 +675,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
                 val safe = sanitizeDownloadUrl(target)
-                if (safe == "#") { if (!auto) { error("Download link is invalid or unsupported."); haptic(H.ERROR) }; return@launch }
+                if (safe == "#") { if (!auto) { error("Link de download inválido ou não suportado."); haptic(H.ERROR) }; return@launch }
                 val std = safe.lowercase().let { it.endsWith(".apk") || it.endsWith(".xapk") || it.endsWith(".apkm") || it.endsWith(".apks") || it.endsWith(".exe") || it.endsWith(".zip") }
                 if (!app.installsHere()) { if (!auto && (std || app.platform == Platform.PC || app.platform == Platform.TV)) tracker.open(safe); return@launch }
-                if (Downloads.dir().usableSpace < 64L * 1024 * 1024) { if (!auto) error("Not enough space on device!"); return@launch }
+                if (Downloads.dir().usableSpace < 64L * 1024 * 1024) { if (!auto) error("Espaço insuficiente no dispositivo!"); return@launch }
                 val resolved = runCatching { withContext(Dispatchers.IO) { Orbit.prepareDownload(safe) } }.getOrElse { e ->
-                    if (!auto) error(if (e is HttpError && (e.code == 403 || e.code == 429)) "Rate limited by the host, try later" else "Couldn't get the download link.")
+                    if (!auto) error(if (e is HttpError && (e.code == 403 || e.code == 429)) "Limite de taxa do host; tente mais tarde" else "Não foi possível obter o link de download.")
                     return@launch
                 }
                 AssetAuth.arm(s, d.orbit)
@@ -701,7 +701,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 DlStatus.FAILED -> {
                     Downloads.forget(file)
                     if (dl.progress > 90 && Downloads.status(file).status == DlStatus.SUCCESSFUL) downloadComplete(id, true)
-                    else { downloadComplete(id, false); error("Download Failed - Network Error") }
+                    else { downloadComplete(id, false); error("Download falhou – Erro de rede") }
                 }
             }
         }
@@ -726,14 +726,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (st.rootMode || st.useShizuku || st.useDhizuku || st.directInstall && WirelessAdb.supported) { installFile(app, file, opts = if (st.installOptions) st.installFlags else null); return@launch }
         val f = Downloads.file(file) ?: return@launch
         val pkg = withContext(Dispatchers.IO) { tracker.archivePackage(f) }
-        val err = if (pkg == null) "The downloaded file is not a valid APK." else AutoUpdate.install(ctx, tracker, st, f, pkg, app.name)
+        val err = if (pkg == null) "O arquivo baixado não é um APK válido." else AutoUpdate.install(ctx, tracker, st, f, pkg, app.name)
         if (err == null) beginVerify(app) else { notifyReady(app, file); toast("${app.name}: $err", 6000, "Install") { installFile(app, file) } }
     }
 
     private fun notifyReady(app: AppItem, file: String) = runCatching {
         val i = Intent(ctx, AlphaStoreActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("appId", app.id).putExtra("fileName", file)
         NotificationManagerCompat.from(ctx).notify(app.id.hashCode(), NotificationCompat.Builder(ctx, "alphastore_updates").setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle("Download Complete").setContentText("${app.name} is ready to install.").setAutoCancel(true)
+            .setContentTitle("Download concluído").setContentText("${app.name} está pronto para instalar.").setAutoCancel(true)
             .setContentIntent(PendingIntent.getActivity(ctx, app.id.hashCode(), i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
     }
 
@@ -742,14 +742,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val ch = questChapter(s.adWatchCount); if (ch <= s.questChapterSeen) return
         set { it.copy(questChapterSeen = ch) }
         val nm = NotificationManagerCompat.from(ctx)
-        if (!nm.areNotificationsEnabled()) { queue { toast("New mission: Chapter 2 · The Forkening", 8000, "Play") { open(Overlay.AD_DONATION) } }; return }
-        nm.createNotificationChannel(NotificationChannelCompat.Builder("alphastore_quest", NotificationManagerCompat.IMPORTANCE_DEFAULT).setName("Fuel the Code missions").build())
+        if (!nm.areNotificationsEnabled()) { queue { toast("Nova missão: Capítulo 2 · A Bifurcação", 8000, "Play") { open(Overlay.AD_DONATION) } }; return }
+        nm.createNotificationChannel(NotificationChannelCompat.Builder("alphastore_quest", NotificationManagerCompat.IMPORTANCE_DEFAULT).setName("Missões de Fuel the Code").build())
         val i = Intent(ctx, AlphaStoreActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("open", "quest")
         runCatching {
             nm.notify(7320, NotificationCompat.Builder(ctx, "alphastore_quest").setSmallIcon(com.ramonmods.alphastore.R.drawable.ic_launcher_monochrome)
-                .setContentTitle("New mission unlocked: The Forkening").setAutoCancel(true)
-                .setStyle(NotificationCompat.BigTextStyle().bigText("Entropy's last breath split AlphaStore into a thousand rogue forks. Chapter 2 of Fuel the Code is live, with three new bosses and three new badges."))
-                .setContentText("Chapter 2 of Fuel the Code is live.")
+                .setContentTitle("Nova missão desbloqueada: A Bifurcação").setAutoCancel(true)
+                .setStyle(NotificationCompat.BigTextStyle().bigText("A última respiração de Entropia dividiu a AlphaStore em milforques. O Capítulo 2 de Fuel the Code está no ar, com três chefes novos e três insígnias novas."))
+                .setContentText("O Capítulo 2 de Fuel the Code está no ar.")
                 .setContentIntent(PendingIntent.getActivity(ctx, 7320, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
         }
     }
@@ -782,8 +782,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (apps.isEmpty()) return@launch
         haptic(H.MEDIUM)
         val eligible = apps.filter { st.installedVersions[it.id].isNullOrEmpty() }
-        if (eligible.isEmpty()) { toast("All apps from ${b.title} are already installed."); return@launch }
-        toast("Queueing ${eligible.size} apps from ${b.title}...")
+        if (eligible.isEmpty()) { toast("Todos os apps de ${b.title} já estão instalados."); return@launch }
+        toast("Enfileirando ${eligible.size} apps de ${b.title}...")
         var queued = 0; var skipped = apps.size - eligible.size
         for (a in eligible) {
             if (a.id in d.activeDownloads || a.id in d.readyToInstall || a.id in initializing) { skipped++; continue }
@@ -791,7 +791,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             delay(180)
         }
         if (queued > 0) { toast("Queued $queued apps from ${b.title}${if (skipped > 0) " ($skipped skipped)" else ""}."); haptic(H.SUCCESS) }
-        else toast("Everything in ${b.title} is already queued or installed.")
+        else toast("Tudo em ${b.title} já está enfileirado ou instalado.")
     }
 
     fun batchCleanup() = viewModelScope.launch {
@@ -835,7 +835,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (opts == null && !regular && s.installOptions) { installAsk = app to file; return@launch }
         val k = normalizePackageName(app.packageName)
         val meta = versionMetaFromFileName(app, file, s.streamOf(app.id))
-        // Direct install runs as the shell user (no 24-hour wait, no "unknown apps" permission). When adbd is unreachable the
+        // Direct install runs as the shell user (no 24-hour wait, no "apps desconhecidos" permission). When adbd is unreachable the
         // user picks the regular installer explicitly: silently falling back lands on the very wait this setting exists to skip.
         val dhizuku = opts == null && !regular && !s.rootMode && s.useDhizuku
         val direct = opts == null && !regular && !dhizuku && !s.rootMode && s.directInstall && WirelessAdb.supported
@@ -847,10 +847,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val shizuku = opts != null || !regular && !direct && !dhizuku && (s.useShizuku || s.rootMode)
         if (!direct && !shizuku && !dhizuku) try {
             if (!tracker.canRequestInstalls()) {
-                error("Please allow permission and return here"); pendingRetry = app to file
+                error("Permita a permissão e volte aqui"); pendingRetry = app to file
                 ctx.startActivity(tracker.installSettingsIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return@launch
             }
-        } catch (e: Exception) { error("Permission check failed. Cannot install."); return@launch }
+        } catch (e: Exception) { error("Falha na verificação de permissão. Não foi possível instalar."); return@launch }
         // Every route (installer, Shizuku, root, adb) fails the same way on a signer clash, so say why before trying
         if (!force) withContext(Dispatchers.IO) { runCatching { tracker.clash(tracker.resolve(file)) }.getOrNull() }?.let { (pkg, c) ->
             val (t, x) = clashText(c, app.name); haptic(H.WARNING)
@@ -864,9 +864,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             ?.takeIf { it.isNotBlank() && normalizePackageName(it) != k }?.let { p -> set { it.copy(resolvedPackageNames = it.resolvedPackageNames + (app.id to p)) } }
         try {
             when {
-                dhizuku -> { DhizukuBridge.install(ctx, tracker.resolve(file)); toast("Installed via Dhizuku") }
-                direct -> { WirelessAdb.install(ctx, tracker.resolve(file)); toast("Installed instantly") }
-                shizuku -> { tracker.installShizuku(file, s.updateLock, opts.orEmpty()); toast(if (s.rootMode) "Installed with root" else "Installed via Shizuku") }
+                dhizuku -> { DhizukuBridge.install(ctx, tracker.resolve(file)); toast("Instalado via Dhizuku") }
+                direct -> { WirelessAdb.install(ctx, tracker.resolve(file)); toast("Instalado instantaneamente") }
+                shizuku -> { tracker.installShizuku(file, s.updateLock, opts.orEmpty()); toast(if (s.rootMode) "Instalado com root" else "Instalado via Shizuku") }
                 else -> { tracker.install(file, s.installerPreference, if (s.installerPreference == "package") s.installerPackage else ""); snackbar.currentSnackbarData?.dismiss() }
             }
             beginVerify(app)
@@ -875,7 +875,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             if (!direct && !shizuku && !dhizuku && ("INSTALL_CANCELED" in msg || "INSTALL_FAILED" in msg) && "INSTALL_FAILED_UPDATE_INCOMPATIBLE" !in msg && "INSTALL_PARSE_FAILED" !in msg) { beginVerify(app); return@launch }
             installingId = null; scanningId = null; expectations -= k
             if ("CORRUPT" in msg || "PARSE_ERROR" in msg) deleteReadyFile(app, file)
-            val signer = listOf("UPDATE_INCOMPATIBLE", "signatures do not match").any { it in msg }
+            val signer = listOf("UPDATE_INCOMPATIBLE", "assinaturas do app não correspondem ao original").any { it in msg }
             val dropped = msg.contains("stream closed", true) || msg.contains("broken pipe", true)
             if (dropped && direct) {
                 val status = runCatching { com.ramonmods.alphastore.platform.SessionInstall.commit(ctx, listOf(tracker.resolve(file)), app.packageName, true) }.getOrNull()?.first
@@ -903,7 +903,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 expectations -= k
                 d.readyToInstall[app.id]?.let { file ->
                     upd { it.recordInstalled(app.id, ver, file, now()).copy(readyToInstall = it.readyToInstall - app.id, pendingCleanup = if (app.id in it.pendingCleanup) it.pendingCleanup else it.pendingCleanup + (app.id to CleanupEntry(file, now()))) }
-                    if (s.deleteApk && purgeApk(app.id, file)) toast("Installed. APK deleted")
+                    if (s.deleteApk && purgeApk(app.id, file)) toast("Instalado. APK deletado")
                 }
                 scanningId = null; maybeNudgeDonate(); return
             }
@@ -1003,8 +1003,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         haptic(H.SELECTION)
         if (!icon) { set { it.copy(navDock = c.id) }; return }
-        if (runCatching { tracker.setLauncherIcon(c.id) }.isFailure) { error("Could not change the app icon."); return }
-        set { it.copy(appIcon = c.id) }; toast("Icon changed. Your launcher may take a few seconds to show it.")
+        if (runCatching { tracker.setLauncherIcon(c.id) }.isFailure) { error("Não foi possível mudar o ícone do app."); return }
+        set { it.copy(appIcon = c.id) }; toast("Ícone alterado. Seu launcher pode demorar segundos para mostrar.")
     }
 
     /** Asked before a silent root or Shizuku uninstall; the system prompt asks on its own. */
@@ -1022,7 +1022,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun removeApp(app: AppItem, pkg: String, dhizuku: Boolean, elevated: Boolean): Boolean {
         val err = runCatching { when { dhizuku -> DhizukuBridge.uninstall(ctx, pkg); elevated -> tracker.uninstallSilent(pkg); else -> tracker.uninstallPrompt(pkg) } }.exceptionOrNull()
-        if (err != null) { error(err.message ?: "Uninstall failed"); return false }
+        if (err != null) { error(err.message ?: "Desinstalação falhou"); return false }
         delay(300)
         if (withContext(Dispatchers.IO) { tracker.appInfo(pkg).installed }) return false
         syncApp(app).join(); return true
@@ -1035,25 +1035,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val elevated = dhizuku || (s.useShizuku || s.rootMode) && tracker.elevatedReady()
         haptic(H.MEDIUM)
         val done = apps.count { a -> (s.resolvedPackageNames[a.id] ?: a.packageName)?.takeIf { it.isNotBlank() }?.let { removeApp(a, it, dhizuku, elevated) } == true }
-        if (done > 0) { toast(if (done == 1) "1 app uninstalled" else "$done apps uninstalled"); haptic(H.SUCCESS) }
+        if (done > 0) { toast(if (done == 1) "1 app uninstalled" else "$done apps desinstaladas"); haptic(H.SUCCESS) }
     }
 
     fun batchInstall() = viewModelScope.launch {
         if (!s.useShizuku && !s.useDhizuku && !s.directInstall && !s.rootMode) return@launch
         val ready = d.readyToInstall; if (ready.isEmpty()) return@launch
-        haptic(H.HEAVY); toast("Updating ${ready.size} apps...")
+        haptic(H.HEAVY); toast("Atualizando ${ready.size} apps...")
         for ((id, f) in ready) { lookup[id]?.let { installFile(it, f, opts = if (s.installOptions) s.installFlags else null).join(); delay(1000) } }
-        toast("All updates completed."); haptic(H.SUCCESS)
+        toast("Todas as atualizações concluídas."); haptic(H.SUCCESS)
     }
 
     fun exportApk(app: AppItem, file: String) = viewModelScope.launch {
         haptic(H.SELECTION)
         try { tracker.exportFile(file); toast("Exported to Downloads"); haptic(H.SUCCESS); upd { it.copy(pendingCleanup = it.pendingCleanup - app.id) } }
-        catch (e: Exception) { error(e.message ?: "Export failed") }
+        catch (e: Exception) { error(e.message ?: "Exportação falhou") }
     }
 
     /** Deletes a downloaded APK and forgets it everywhere it is tracked (ready, pending cleanup, library), so no screen offers it again.
-     *  Every delete path goes through here; clearing only some of these maps is what kept "Delete APK" coming back. */
+     *  Every delete path goes through here; clearing only some of these maps is what kept "Deletar APK" coming back. */
     fun purgeApk(appId: String, file: String?): Boolean {
         if (file != null && runCatching { tracker.deleteFile(file) }.isFailure) return false
         upd { it.copy(pendingCleanup = it.pendingCleanup - appId, readyToInstall = it.readyToInstall - appId).removeLibraryFile(appId, now()) }
@@ -1069,7 +1069,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteLibraryApk(app: AppItem) {
         val file = d.readyToInstall[app.id] ?: d.pendingCleanup[app.id]?.fileName ?: d.appLibrary[app.id]?.fileName
-        if (!purgeApk(app.id, file)) { error("APK could not be deleted."); return }
+        if (!purgeApk(app.id, file)) { error("O APK não pôde ser deletado."); return }
         if (file != null) { set { it.copy(lastRemoteVersions = it.lastRemoteVersions - app.id) }; haptic(H.SUCCESS) }
     }
     // endregion
@@ -1106,7 +1106,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (metered) return@launch
         prefetchShots(f.values.flatMap { (cols, _) -> cols.filter { it.type == CollectionType.HERO }.flatMap { c -> c.apps.flatMap { it.screenshots.take(2) } } }.distinct())
     }
-    private fun openById(id: String, miss: String = "not found") { lookup[id]?.let { selectApp(it) } ?: toast("App ‘$id’ $miss") }
+    private fun openById(id: String, miss: String = "não encontrado") { lookup[id]?.let { selectApp(it) } ?: toast("App ‘$id’ $miss") }
     fun navigateToApp(id: String) = openById(id)
     fun navigateFromSettings(id: String) { overlays -= Overlay.SETTINGS; viewModelScope.launch { delay(100); openById(id) } }
 
@@ -1118,7 +1118,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (seg.getOrNull(0) == "settings") { openSettings(seg.getOrNull(1) ?: "none"); return }
         if (seg.getOrNull(0) != "app" || seg.getOrNull(1) == null) return
         val id = Uri.decode(seg[1])
-        whenLoaded { openById(id, "not found in AlphaStore") }
+        whenLoaded { openById(id, "não encontrado in AlphaStore") }
     }
 
     /** "App details in store" from system App info. Prefers the catalog entry that installed it: forks can share a package name. */
@@ -1126,7 +1126,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val k = normalizePackageName(pkg)
         val id = s.packageOwners[k]?.takeIf { it in lookup }
             ?: allApps().firstOrNull { normalizePackageName(s.resolvedPackageNames[it.id] ?: it.packageName) == k }?.id
-        if (id != null) openById(id) else toast("This app isn't in AlphaStore")
+        if (id != null) openById(id) else toast("Este app não está na AlphaStore")
     }
 
     private fun whenLoaded(open: () -> Unit) { if (lookup.isEmpty()) pendingDeepLink = open else open() }
@@ -1174,7 +1174,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         upd { st -> st.copy(orbit = if (st.orbit.any { it.id == o.id }) st.orbit.map { if (it.id == o.id) o else it } else st.orbit + o) }
         if (adding) {
             considerSharePrompt()
-            d.apps.firstOrNull { Orbit.sameCatalog(o, it) }?.let { toast("${o.name.ifBlank { "This app" }} is also in the AlphaStore library. Orbit follows this source on your phone.") }
+            d.apps.firstOrNull { Orbit.sameCatalog(o, it) }?.let { toast("${o.name.ifBlank { "This app" }} também está na biblioteca da AlphaStore. O Orbit acompanha esta fonte no seu celular.") }
         }
         scheduleInstalledSync()
     }
@@ -1197,8 +1197,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val blocked = fresh.mapNotNull { Orbit.refused(it.url, it.name, it.packageName.orEmpty(), it.author) }.distinct()
         val ok = fresh.filter { Orbit.refused(it.url, it.name, it.packageName.orEmpty(), it.author) == null }
         if (blocked.isNotEmpty()) orbitRefuse(blocked.joinToString("\n\n"))
-        if (ok.isEmpty()) { if (blocked.isEmpty()) toast("Everything here is already in Orbit"); return@launch }
-        upd { st -> st.copy(orbit = st.orbit + ok) }; haptic(H.SUCCESS); toast(if (ok.size == 1) "${ok[0].name.ifBlank { "1 app" }} joined your Orbit" else "${ok.size} apps joined your Orbit")
+        if (ok.isEmpty()) { if (blocked.isEmpty()) toast("Tudo aqui já está no Orbit"); return@launch }
+        upd { st -> st.copy(orbit = st.orbit + ok) }; haptic(H.SUCCESS); toast(if (ok.size == 1) "${ok[0].name.ifBlank { "1 app" }} entrou no seu Orbit" else "${ok.size} apps entrou no seu Orbit")
         considerSharePrompt()
         ok.chunked(3).forEach { batch ->
             val done = batch.map { o -> async(Dispatchers.IO) { runCatching { Orbit.probe(o.url, s.orbitTokens(), now(), o) }.getOrDefault(o) } }.awaitAll()
@@ -1243,8 +1243,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun titleClick() {
         if (s.isDevUnlocked) { toast("Already a developer."); return }
         devClicks++; val left = 7 - devClicks
-        if (left in 1..4) { toast("You are $left steps away from being a developer."); haptic(H.LIGHT) }
-        if (devClicks >= 7) { set { it.withDevUnlocked(true) }; toast("You are now a developer!"); haptic(H.SUCCESS); devClicks = 0 }
+        if (left in 1..4) { toast("Você está a $left passos de ser desenvolvedor."); haptic(H.LIGHT) }
+        if (devClicks >= 7) { set { it.withDevUnlocked(true) }; toast("Você agora é desenvolvedor!"); haptic(H.SUCCESS); devClicks = 0 }
     }
 
     fun profileClick(view: String? = null, index: Int? = null) {
@@ -1322,7 +1322,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val local = s.customBundles.map { cb -> BundleItem(cb.id, cb.title, cb.description, cb.appIds, cb.appIds.mapNotNull { id -> lookup[id]?.takeIf { it.platform == p } }, badge = "Local", icon = cb.icon) }.filter { it.apps.isNotEmpty() }
         if (local.isEmpty()) return withUpdates
         val idx = withUpdates.indexOfFirst { it.type == CollectionType.RECOMMENDATION_BUNDLES }
-        if (idx == -1) return injectAfterHero(withUpdates, StoreCollection("recommendation_bundles_local", "Recommended app bundles", CollectionType.RECOMMENDATION_BUNDLES, "Curated picks for your platform", bundles = local))
+        if (idx == -1) return injectAfterHero(withUpdates, StoreCollection("recommendation_bundles_local", "Recommended app bundles", CollectionType.RECOMMENDATION_BUNDLES, "Seleções curadas para sua plataforma", bundles = local))
         return withUpdates.toMutableList().also { l -> val t = l[idx]; val ids = t.bundles.map { it.id }.toSet(); l[idx] = t.copy(bundles = t.bundles + local.filter { it.id !in ids }) }
     }
 
